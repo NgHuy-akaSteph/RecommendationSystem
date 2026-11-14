@@ -22,7 +22,7 @@ báo cáo. Đường chạy duy nhất, 9 mô hình × 3 giao thức, 27 bảng 
 | Chỉ số ngoài độ chính xác + phân tầng kỷ nguyên | ✅ Hoàn tất |
 | Sweep tham số (159 config, đã chạy đủ) | ✅ Hoàn tất |
 | Dọn code legacy + tài liệu | 🔄 Đang làm |
-| Báo cáo | ⬜ Chưa bắt đầu |
+| Báo cáo | 🔄 Đang làm (Chương 5–6 xong) |
 
 ---
 
@@ -41,7 +41,7 @@ Nguồn chi tiết: `plans/261113-2106-unify-recsys-and-recommendation-cb/`.
 | 04b | Viết tài liệu kiến trúc + cập nhật docs so sánh | ✅ Complete | 2026-11-14 |
 | 04c | Rà soát README mô tả đúng một đường chạy | ✅ Complete | 2026-11-14 |
 | 05 | Sửa sai lệch số liệu + commit bằng chứng sweep | ✅ Complete | 2026-11-14 |
-| 06 | Viết báo cáo | ⬜ Chưa bắt đầu | — |
+| 06 | Viết báo cáo | 🔄 Đang làm | 2026-11-15 |
 
 ---
 
@@ -116,16 +116,16 @@ Nguồn chi tiết: `plans/261113-2106-unify-recsys-and-recommendation-cb/`.
 
 | Việc | Ghi chú |
 |---|---|
-| Viết báo cáo | Khung gợi ý: `notes/report-structure.md` **không dùng được** (viết cho MovieLens 1M / 2 methods, đã lệch hoàn toàn) — cần viết khung mới cho 25M / 9 mô hình |
-| Nêu rõ giới hạn metadata hậu kỳ | Bắt buộc theo điều kiện của phase 00 |
-| Nêu rõ `pop_prior` giết cold-start | Bảng chính lấy bản content thuần; phải giải thích vì sao |
-| Nêu rõ BPR `num_threads=1` | Số trong bảng là số tái lập được |
+| Viết báo cáo | Khung đã viết lại cho 25M / 9 mô hình ở `notes/report-structure.md`. **Chương 5–6 đã có prose** ở `docs/report/` (xem `docs/report/README.md` làm mục lục). Còn lại: Chương 1–4, 7, 8 |
+| Nêu rõ giới hạn metadata hậu kỳ | Bắt buộc theo điều kiện của phase 00 — **đã viết** ở Chương 6 §6.1 và mục giới hạn §6.5.2 |
+| Nêu rõ `pop_prior` giết cold-start | Bảng chính lấy bản content thuần; **đã giải thích** ở Chương 5 §5.3.2 |
+| Nêu rõ BPR `num_threads=1` | Số trong bảng là số tái lập được — cần viết ở Chương 2 §2.2.5 / Chương 4 |
 
 ### 5.2 Tùy chọn (nếu còn thời gian)
 
 | Việc | Chi phí | Giá trị |
 |---|---|---|
-| Chạy sampled LOO → Kendall τ | ~20 phút | Biến lựa chọn "full ranking" từ trích dẫn thành **kết quả thực nghiệm** của đồ án. Hiện mới có docstring, chưa có bằng chứng chạy |
+| Chạy sampled LOO → Kendall τ | ~20 phút | Biến lựa chọn "full ranking" từ trích dẫn thành **kết quả thực nghiệm** của đồ án. Script **đã sửa** (dedup `exp_name`, đọc metric gốc `results/{exp_name}_metrics.csv`) và **chưa chạy** — cần chạy rồi điền vào Chương 7 §7.4 |
 | Bảng so sánh CF↔CB dùng Wilcoxon chung | Thấp | Hiện Wilcoxon chỉ chạy trong từng bảng — cần bảng riêng vì đây là câu hỏi khác |
 | Chạy `full` cho các config còn lại của sweep | Cao (~50 phút) | Chỉ cần nếu muốn bảng sweep ở `full` thay vì `dev` |
 

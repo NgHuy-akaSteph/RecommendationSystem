@@ -216,7 +216,15 @@ duy nhất của lưới tham số. Toàn bộ lưới đã chạy ở `dev` cho
 | Lát cắt | Số config | NDCG@10 | Biên độ |
 |---|---|---|---|
 | `reg` × `iterations` (f=64, α=5) | 8 | 0,1377 – 0,1383 | **0,40%** |
-| **Toàn lưới** (thêm `α` ∈ {1,5,10,40} và `factors` ∈ {64,128}) | 15 | 0,1135 – 0,1383 | **18,65%** |
+| **Toàn lưới** (thêm `α` ∈ {1,5,10,40} và `factors` ∈ {64,128}) | 15 | 0,1135 – 0,1383 | **17,94%** |
+
+> **Quy ước biên độ duy nhất của repo:** `(max − min) / max`, tính trên NDCG@10 của giao
+> thức `dev`. Cùng công thức này, toàn lưới ALS ra **17,94%**; nếu dùng mẫu số trung
+> bình thì ra 18,65% — hai tài liệu phải ghi **cùng một quy ước** (repo chọn `(max−min)/max`).
+>
+> Lưu ý thêm: **17,94% là biên độ của riêng lưới ALS**. Biên độ của **toàn nhóm CF**
+> (51 config, gồm thêm BPR biên độ 67,07%) là **73,65%** — hai con số này không được
+> trộn. Chi tiết đầy đủ theo model và theo nhóm: `docs/report/05-experimental-results.md` §5.2.
 
 `α` (confidence weight) là tham số gây sụp lớn nhất: α=40 kéo ALS xuống **0,1135**,
 tức **−18%** so với α=5 (0,1379). Nói cách khác, ALS **không nhạy với `reg`/`iterations`

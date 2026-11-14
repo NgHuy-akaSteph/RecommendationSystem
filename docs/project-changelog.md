@@ -5,6 +5,76 @@ thay đổi và cách kiểm chứng.
 
 ---
 
+## 2026-11-15 — Viết báo cáo Chương 5–6 + vá 3 sai lệch
+
+**Phạm vi:** Viết prose cho Chương 5 (Kết quả) và Chương 6 (Chống rò rỉ & tranh luận)
+vào `docs/report/`, đồng thời vá ba sai lệch đã phát hiện trong tài liệu và script.
+Không đổi thuật toán, không chạy lại thực nghiệm.
+
+### Ba sai lệch đã vá
+
+| # | Vị trí | Vấn đề | Cách sửa |
+|---|---|---|---|
+| 1 | `notes/report-structure.md` §5.2 | Quy ước biên độ sweep **trộn hai loại**: "CF 17,94%" là biên độ riêng lưới ALS, biên độ toàn nhóm CF thật là **73,65%** | Tách thành **hai bảng** (theo model / theo nhóm), ghi công thức `(max−min)/max` + protocol `dev`; thêm test chặn hồi quy |
+| 2 | `scripts/run_sampled_loo_comparison.py` | Merge theo `exp_name` → **mất dòng `cb4-04`** + **dòng trùng** (2 config `rs-itemcf` trùng `exp_name`) → Kendall τ sai | Dedup `best-*.yaml` theo `exp_name`; đổi nguồn metric sang `results/{exp_name}_metrics.csv` (đủ 12 `exp_name`, có `split_id`/`catalog_id`); assert chống trùng/mất |
+| 3 | `results/figures/` | §5.2 yêu cầu hình "thanh ngang so sánh toàn sweep" nhưng **không tồn tại** | Thêm `figure_sweep_range()` → `results/figures/results-sweep-range.png` |
+
+### Đính chính quy ước biên độ ALS (18,65% → 17,94%)
+
+Repo từng có **hai quy ước biên độ cùng tồn tại**: `(max−min)/max` → ALS 17,94% và
+`(max−min)/trung bình` → ALS 18,65%. `README.md` + changelog ghi 18,65%, còn
+`notes/report-structure.md` ghi 17,94% → **hai tài liệu nói khác nhau**.
+
+Đã **chốt một quy ước duy nhất**: `(max − min) / max` (mẫu số max) — khớp với biên
+độ các nhóm khác trong cùng bảng. Sửa đồng thời `README.md`,
+`docs/project-changelog.md`, `plans/.../phase-03-...md` và test
+`test_docs_state_full_als_spread` (nay chặn cả việc dùng lại 18,65% ngoài chú thích đính chính).
+
+### Nội dung báo cáo mới
+
+| File | Nội dung |
+|---|---|
+| `docs/report/README.md` | Mục lục 8 chương, nguồn sự thật, quy ước bất di bất dịch, mapping chương ↔ file CSV, 3 giao thức |
+| `docs/report/05-experimental-results.md` | §5.1 bảng CF/CB (`full`) · §5.2 cân bằng sweep + biên độ theo model/nhóm + đối chiếu `dev`↔`full` · §5.3 cold-start + `frac_unseen@10` + Wilcoxon · §5.4 bootstrap CI + lý do không so chéo CF↔CB · §5.5 nhóm user |
+| `docs/report/06-leakage-analysis-and-discussion.md` | §6.1 metadata hậu kỳ + confound Pearson 0,768 · §6.2 phân tầng 3 kỷ nguyên + đối chứng "chỉ genres" · §6.3 chế độ trọng số hồ sơ · §6.4 metric ngoài độ chính xác · §6.5 bảng "khi nào thắng" + **mục giới hạn của chính kết luận chống rò rỉ** |
+
+### Thay đổi mã nguồn
+
+| Nhóm | Nội dung |
+|---|---|
+| Mới | `src/eval/sweep_spread.py` — nguồn sự thật cho biên độ sweep (theo model / theo nhóm), công thức `(max−min)/max`, `MODEL_OWNER` xác định file sở hữu mỗi model |
+| Mới | `scripts/check_report_numbers.py` — đối chiếu **mọi** số trong báo cáo với `results/final/*.csv`; số nào không truy được thì `exit 1` |
+| Sửa | `scripts/run_sampled_loo_comparison.py` — dedup `exp_name`, nguồn metric gốc, assert chống trùng/mất |
+| Sửa | `src/eval/make_result_figures.py` — thêm `figure_sweep_range()`; 8 hình cũ **không đổi byte** (đã kiểm bằng md5) |
+| Sửa | `notes/report-structure.md` §5.2 — tách biên độ theo model / theo nhóm |
+
+### Test chặn hồi quy mới
+
+| Test | Chặn cái gì |
+|---|---|
+| `tests/test_report_sweep_spreads.py` (12 test) | Biên độ trong tài liệu khớp `ablation-*.csv` (**tính động**, không hard-code); cấm trộn model/nhóm; cấm quay lại quy ước mẫu số trung bình |
+| `tests/test_report_numbers_consistency.py` (9 test) | Số trong báo cáo truy được về `results/final/`; kèm phép thử **chèn số sai** để chứng minh checker thật sự bắt lỗi |
+| `tests/test_phase3_sampled_loo_comparison.py` (12 test) | Script LOO không đọc `dev-summary.csv` trung gian; dedup đúng; merge không trùng/mất dòng |
+
+### Kiểm chứng
+
+| Hạng mục | Kết quả |
+|---|---|
+| `venv/bin/python scripts/check_report_numbers.py` | **0 lệch** (2 file báo cáo × 27 bảng CSV) |
+| `pytest tests/` | xanh toàn bộ |
+| 8 hình cũ trong `results/figures/` | md5 **không đổi** — chỉ thêm `results-sweep-range.png` |
+
+### Còn lại (đã gác theo yêu cầu)
+
+| Việc | Lý do |
+|---|---|
+| Chạy sweep trên protocol `full` (144 config) | Người dùng tự chạy sau khi có báo cáo |
+| Chạy thật `run_sampled_loo_comparison.py` để lấy Kendall τ | Script đã sửa + test; cần ~20 phút chạy |
+| Viết Chương 1–4, 7, 8 | Ngoài phạm vi đợt này |
+| Đẩy commit lên `origin/v1` | Chưa được yêu cầu |
+
+---
+
 ## 2026-11-14 — Sửa sai lệch số liệu trước khi viết báo cáo
 
 **Phạm vi:** Audit toàn repo trước khi viết báo cáo. Tìm và sửa **6 sai lệch** giữa mô tả
@@ -610,7 +680,7 @@ công bằng". **Cả hai vế của câu đó đều sai.** Số đo lại trê
 
 | Tuyên bố cũ | Thực tế |
 |---|---|
-| ALS biên độ 0,40% | Chỉ đúng cho lát cắt `reg` × `iterations` (8 config, f=64, α=5). **Toàn lưới 15 config biên độ 18,65%** (0,1135 → 0,1383) |
+| ALS biên độ 0,40% | Chỉ đúng cho lát cắt `reg` × `iterations` (8 config, f=64, α=5). **Toàn lưới 15 config biên độ 17,94%** (0,1135 → 0,1383) |
 | ALS "không nhạy" | ALS **rất nhạy với `α`**: α=40 → 0,1135 (−18% so với α=5 = 0,1379). `factors` cũng ảnh hưởng (f=128 tệ hơn f=64 ở mọi α) |
 | CB nhận 103 config, CF chỉ 18 | **Đảo ngược.** Trong repo này CF đã chạy **49 config**, CB mới chạy **8** (85 config CB chưa chạy — trạng thái trước sweep) |
 | "CF thắng không bị coi là thiên lệch" | Sai. CF được quét gấp 6 lần CB → kết luận "CF thắng" đang **thiên về CF**, cần sweep CB đủ mới gọi là công bằng |
@@ -624,7 +694,7 @@ công bằng". **Cả hai vế của câu đó đều sai.** Số đo lại trê
 | 0,1 | **0,138270** | 0,137976 |
 | 1,0 | 0,137822 | 0,137824 |
 
-**Toàn lưới ALS đã chạy ở `dev`** (15 config) — biên độ **18,65%**:
+**Toàn lưới ALS đã chạy ở `dev`** (15 config) — biên độ **17,94%**:
 
 | factors | α=1 | α=5 | α=10 | α=40 |
 |---|---|---|---|---|
@@ -733,7 +803,7 @@ Audit phát hiện ba lỗi trong chính tài liệu của phase 03 và một sc
 
 1. **"ALS không nhạy, biên độ 0,40%"** — con số đó chỉ đúng cho lát cắt `reg × iterations`
    (8 config, `f=64, α=5`). Toàn lưới đã chạy (15 config, thêm `α` và `factors`) cho biên
-   độ **18,65%**. `α` là tham số gây sụp lớn nhất: α=40 → 0,1135 (−18% so với α=5).
+   độ **17,94%**. `α` là tham số gây sụp lớn nhất: α=40 → 0,1135 (−18% so với α=5).
 2. **"CB nhận 103 config, CF chỉ 18"** — đảo ngược. Đó là số của repo `recommendation-cb`.
    Trong repo này CF đã chạy **49 config**, CB mới **8** (85 config CB chưa chạy — trạng
    thái trước sweep).
@@ -748,7 +818,7 @@ Audit phát hiện ba lỗi trong chính tài liệu của phase 03 và một sc
 | Nhóm | Nội dung |
 |---|---|
 | Sửa | `README.md` — mục "Cảnh báo cân bằng sweep — CF vs CB" (49 vs 8) và "Độ nhạy tham số của ALS"; kết luận "CF thắng" viết lại thành *thận trọng, chưa cân bằng* |
-| Sửa | `docs/project-changelog.md` — mục "Cân bằng số config — đính chính" với bảng biên độ 0,40% vs 18,65% và bảng số config thực tế |
+| Sửa | `docs/project-changelog.md` — mục "Cân bằng số config — đính chính" với bảng biên độ 0,40% vs 17,94% và bảng số config thực tế |
 | Sửa | `plans/.../phase-03-run-shared-benchmark-tables.md` + `plan.md` — đính chính cùng nội dung; ghi rõ sweep CB 85 config **đã chốt tạm dừng** |
 | Viết lại | `scripts/build_final_tables.py` — lấy nguồn từ `src.eval.benchmark_tables` (giữ `split_id`/`catalog_id`/`model`), **không ghi đè** `benchmark-*`/`wilcoxon-*`, mọi lỗi thiếu dữ liệu thành `_Missing` thay vì crash |
 | Sửa | `src/eval/benchmark_tables.py` — thêm cột `model` vào bảng; sửa docstring về số config |

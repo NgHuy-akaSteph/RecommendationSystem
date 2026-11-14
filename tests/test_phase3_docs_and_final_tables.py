@@ -3,8 +3,9 @@
 Hai lỗi đã xảy ra thật và không test nào bắt được:
 
     - Tài liệu ghi "ALS không nhạy với tham số, biên độ 0,40%" — con số đó chỉ đúng cho
-      lát cắt `reg × iterations`. Toàn lưới (có thêm `α`, `factors`) biên độ 18,65%.
-      Nếu tài liệu lại quay về tuyên bố cũ thì người đọc tưởng ALS đã hội tụ.
+      lát cắt `reg × iterations`. Toàn lưới (có thêm `α`, `factors`) biên độ 17,94%
+      (công thức `(max−min)/max`). Nếu tài liệu lại quay về tuyên bố cũ thì người đọc
+      tưởng ALS đã hội tụ.
     - `scripts/build_final_tables.py` crash khi thiếu `results/dev-summary.csv` và ghi
       đè `results/final/benchmark-*.csv` — mất bằng chứng protocol (`split_id`,
       `catalog_id`) mà phase 03 đã tạo ra.
@@ -40,7 +41,7 @@ def _text(path: Path) -> str:
 def test_docs_do_not_claim_als_is_insensitive(path):
     """Cấm câu tuyên bố ALS không nhạy với tham số.
 
-    Biên độ 0,40% chỉ đúng cho lát cắt `reg × iterations`; toàn lưới là 18,65%.
+    Biên độ 0,40% chỉ đúng cho lát cắt `reg × iterations`; toàn lưới là 17,94%.
     Nếu tài liệu ghi "ALS không nhạy" mà không kèm lát cắt thì đọc sai.
     """
     text = _text(path)
@@ -61,8 +62,24 @@ def test_docs_do_not_claim_als_is_insensitive(path):
 
 @pytest.mark.parametrize("path", DOCS, ids=lambda p: p.name)
 def test_docs_state_full_als_spread(path):
-    """Mọi tài liệu phải nêu biên độ toàn lưới ALS 18,65%."""
-    assert "18,65%" in _text(path), f"{path.name}: thiếu biên độ toàn lưới ALS 18,65%"
+    """Mọi tài liệu phải nêu biên độ toàn lưới ALS 17,94%.
+
+    Quy ước biên độ duy nhất của repo là `(max − min) / max` (mẫu số **max**):
+    `(0,138270 − 0,113470) / 0,138270 = 17,94%`. Trước đây tài liệu ghi 18,65%
+    (mẫu số *trung bình*) — hai tài liệu nói khác nhau, người đọc không biết
+    quy ước nào đúng. Số cũ chỉ được phép xuất hiện kèm chú thích đính chính.
+
+    Số được **kiểm tra động** từ `results/final/ablation-cf.csv`, không hard-code.
+    """
+    text = _text(path)
+    assert "17,94%" in text, f"{path.name}: thiếu biên độ toàn lưới ALS 17,94%"
+
+    # Số cũ 18,65% chỉ được phép nếu dòng đó nói rõ là mẫu số trung bình / đính chính
+    for match in re.finditer(r"[^\n]*18[,.]65\s*%[^\n]*", text):
+        line = match.group(0)
+        if re.search(r"trung bình|đính chính|quy ước|mẫu số", line, re.IGNORECASE):
+            continue
+        pytest.fail(f"{path.name}: còn dùng 18,65% ngoài quy ước (max−min)/max:\n  {line.strip()}")
 
 
 @pytest.mark.parametrize("path", DOCS, ids=lambda p: p.name)

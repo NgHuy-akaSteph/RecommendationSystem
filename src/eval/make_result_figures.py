@@ -16,11 +16,27 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 
 from src import paths  # noqa: E402
+from src.eval import sweep_spread  # noqa: E402
 
 FIGURES_DIR = paths.RESULTS_DIR / "figures"
 FINAL_DIR = paths.RESULTS_DIR / "final"
 # Lọc cộng tác tô một màu, nội dung màu khác, baseline xám — người đọc thấy ngay nhóm nào
 COLORS = {"CF": "#c0504d", "CB": "#4f81bd", "Baseline": "#999999"}
+
+# Bảng màu theo **model** (9 model) cho hình sweep-range. Tô màu theo nhóm không đủ:
+# `cb3-genome` và `cb3-ridge` cùng là CB-3 nhưng biên độ khác xa (90,45% vs 75,98%),
+# và `rs-bpr` là CF nhưng lệch hẳn `cf-als` (67,07% vs 17,94%).
+MODEL_COLORS = {
+    "cf-als": "#c0504d",
+    "cf-itemknn": "#e08a8a",
+    "rs-itemcf": "#a0522d",
+    "rs-bpr": "#7f3b3b",
+    "cb1-tfidf": "#4f81bd",
+    "cb2-bm25": "#2f5f9e",
+    "cb3-genome": "#6fa8dc",
+    "cb3-ridge": "#a9c4e4",
+    "cb4-hybrid": "#1f3864",
+}
 
 
 def _family(name: str) -> str:
@@ -175,6 +191,97 @@ def figure_beyond_accuracy(beyond: pd.DataFrame, names: dict[str, str]) -> None:
     plt.close(fig)
 
 
+def figure_sweep_range(full: pd.DataFrame) -> None:
+    """Hình so sánh NDCG@10 của **toàn bộ sweep** (144 config).
+
+    Đây là hình mà khung báo cáo §5.2 yêu cầu ("thanh ngang so sánh NDCG@10 toàn
+    sweep CF vs CB") nhưng chưa tồn tại.
+
+    Bố cục hai panel:
+      - **Trái:** thanh ngang **một thanh cho mỗi model**, thanh chạy từ `min` đến
+        `max` của lưới tham số đó, điểm đậm là cấu hình tốt nhất. Đọc được ngay
+        "model nào nhạy tham số" — màu theo `model` (không theo nhóm: `cb3-genome`
+        và `cb3-ridge` cùng nhóm nhưng biên độ khác xa).
+      - **Phải:** biên độ `(max−min)/max` của từng model, cùng công thức với bảng
+        §5.2 — hình và bảng phải dùng **cùng một quy ước**.
+
+    Tiêu đề ghi rõ protocol (`dev`, 20.000 user, `split_id`) — hình tự chứng minh
+    được mình thuộc giao thức nào, không để người đọc phải tra chú thích.
+    """
+    frames = []
+    for name in sweep_spread.GROUP_FILES.values():
+        path = FINAL_DIR / name
+        if path.exists():
+            frames.append(pd.read_csv(path))
+    if not frames:
+        raise SystemExit("Thiếu results/final/ablation-*.csv — không sinh được hình sweep.")
+    sweep = pd.concat(frames, ignore_index=True)
+
+    # Mỗi model gom từ **file ablation sở hữu nó** — cùng cách chia với
+    # `sweep_spread.spread_by_model()`, nếu không bảng §5.2 và hình này lệch nhau.
+    by_model = sweep_spread.spread_by_model(FINAL_DIR)
+    by_group = sweep_spread.spread_by_group(FINAL_DIR)
+    if not by_model:
+        raise SystemExit("Không đọc được model nào từ results/final/ablation-*.csv.")
+
+    models = list(by_model)
+    y = np.arange(len(models))
+
+    fig, axes = plt.subplots(
+        1, 2, figsize=(13, 6.5), gridspec_kw={"width_ratios": [1.35, 1]}
+    )
+
+    # ── Panel trái: khoảng min–max của từng model ────────────────────────
+    ax = axes[0]
+    for i, model in enumerate(models):
+        sp = by_model[model]
+        color = MODEL_COLORS.get(model, "#999999")
+        ax.barh(i, sp.max_value - sp.min_value, left=sp.min_value,
+                height=0.55, color=color, alpha=0.85)
+        ax.plot(sp.max_value, i, marker="o", color="black", markersize=5, zorder=3)
+        ax.text(sp.max_value + 0.002, i, f"{sp.max_value:.4f}", va="center", fontsize=7)
+        ax.text(sp.min_value - 0.002, i, f"{sp.min_value:.4f}", va="center",
+                ha="right", fontsize=7)
+    ax.set_yticks(y)
+    ax.set_yticklabels(models, fontsize=9)
+    ax.set_xlabel("NDCG@10")
+    ax.set_xlim(0, 0.155)
+    ax.set_title("Khoảng min–max của mỗi model (● = cấu hình tốt nhất)")
+    ax.grid(axis="x", alpha=0.25)
+
+    # ── Panel phải: biên độ sweep theo model ────────────────────────────
+    ax = axes[1]
+    spreads = [by_model[m].spread_pct for m in models]
+    ax.barh(y, spreads, color=[MODEL_COLORS.get(m, "#999999") for m in models])
+    for i, sp in enumerate(spreads):
+        ax.text(sp + 1.2, i, f"{sp:.2f}%", va="center", fontsize=8)
+    ax.set_yticks(y)
+    ax.set_yticklabels(models, fontsize=9)
+    ax.set_xlabel("Biên độ sweep = (max − min) / max  (%)")
+    ax.set_xlim(0, max(spreads) * 1.22)
+    ax.set_title("Biên độ sweep theo model (giao thức `dev`)")
+    ax.grid(axis="x", alpha=0.25)
+
+    # Đường tham chiếu biên độ của nhóm (lớn hơn) để thấy model vs nhóm
+    for group, sp in by_group.items():
+        ax.axvline(sp.spread_pct, color="#999999", linestyle=":", linewidth=0.9, alpha=0.7)
+    ax.legend(
+        handles=[plt.Line2D([], [], color="#999999", linestyle=":", lw=1,
+                            label="biên độ theo nhóm (xem bảng §5.2)")],
+        fontsize=7, loc="lower right",
+    )
+
+    users = int(sweep["n_eval_users"].iloc[0]) if "n_eval_users" in sweep else 20_000
+    fig.suptitle(
+        f"Toàn bộ sweep — NDCG@10 theo model · protocol `dev` "
+        f"({users:,} user, split_id=temporal80_20) · tổng {len(sweep)} config",
+        fontsize=11,
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.savefig(FIGURES_DIR / "results-sweep-range.png", dpi=150)
+    plt.close(fig)
+
+
 def main() -> None:
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     full = _load("full-summary.csv")
@@ -191,6 +298,9 @@ def main() -> None:
     if buckets is not None:
         figure_user_buckets(buckets, names)
         written.append("results-user-buckets.png")
+
+    figure_sweep_range(full)
+    written.append("results-sweep-range.png")
 
     beyond = _load("beyond-accuracy-full.csv")
     if beyond is not None:

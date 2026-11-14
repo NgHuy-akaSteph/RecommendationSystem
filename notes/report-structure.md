@@ -294,11 +294,49 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 
 - **Bằng chứng:** `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (144 dòng = 51 CF + 93 CB,
   mỗi dòng mang `params` + `split_id`/`catalog_id`) — người đọc kiểm chứng được mà không phải tin lời
-- **Đường biên độ toàn sweep:** CF 17,94% (0,1135→0,1383); CB-1 96,06%, CB-3 95,72%,
-  CB-4 32,00%, CB-2 16,82%
-- **Điểm quan trọng về ALS:** nhạy với `α` (α=40 sụp 18%) chứ **không** nhạy với
-  `reg`/`iterations` (biên độ 0,40% trong lát cắt đó)
+- **Quy ước biên độ sweep:** công thức `(max − min) / max`, tính trên **NDCG@10** của
+  giao thức `dev` (20.000 user, `split_id=temporal80_20`, `seed=42`). Mọi biên độ dưới
+  đây đều dùng chung công thức này.
+- **Biên độ theo model** (mỗi model là một lưới tham số riêng):
+
+  | Model | n | min → max | Biên độ |
+  |---|---:|---|---:|
+  | `cf-als` | 15 | 0,1135 → 0,1383 | **17,94%** |
+  | `cf-itemknn` | 3 | 0,1263 → 0,1297 | **2,57%** |
+  | `rs-bpr` | 21 | 0,0364 → 0,1106 | **67,07%** |
+  | `rs-itemcf` | 12 | 0,1056 → 0,1297 | **18,58%** |
+  | `cb1-tfidf` | 15 | 0,0036 → 0,0914 | **96,06%** |
+  | `cb2-bm25` | 21 | 0,0821 → 0,0986 | **16,82%** |
+  | `cb3-genome` | 19 | 0,0067 → 0,0703 | **90,45%** |
+  | `cb3-ridge` | 3 | 0,0030 → 0,0125 | **75,98%** |
+  | `cb4-hybrid` | 32 | 0,0726 → 0,1067 | **32,00%** |
+
+- **Biên độ theo nhóm** (toàn bảng ablation của nhóm):
+
+  | Nhóm | File | n | min → max | Biên độ |
+  |---|---|---:|---|---:|
+  | CF | `ablation-cf.csv` | 51 | 0,0364 → 0,1383 | **73,65%** |
+  | CB-1 | `ablation-cb1.csv` | 15 | 0,0036 → 0,0914 | **96,06%** |
+  | CB-2 | `ablation-cb2.csv` | 21 | 0,0821 → 0,0986 | **16,82%** |
+  | CB-3 | `ablation-cb3.csv` | 22 | 0,0030 → 0,0703 | **95,72%** |
+  | CB-4 | `ablation-cb4.csv` | 35 | 0,0726 → 0,1067 | **32,00%** |
+
+  > ⚠️ **Hai quy ước này không được trộn.** "CF 17,94%" là biên độ của **riêng lưới
+  > ALS** (mẫu số max); biên độ của **toàn nhóm CF** là **73,65%** vì nhóm gồm thêm
+  > BPR (biên độ 67,07%). Tương tự, CB-3 (95,72%) gồm cả lưới `cb3-ridge` (75,98%).
+  > ⚠️ `ablation-cb4.csv` chứa **3 dòng `model=cb1-tfidf`** (họ time-decay `cb4-03-*`)
+  > — đây là họ time-decay đặt trên nền CB-1, **không phải** hybrid; biên độ nhóm
+  > CB-4 vẫn đúng vì 32/35 dòng là `cb4-hybrid`.
+- **Đối chiếu `dev` ↔ `full`:** `dev` (20.000 user) là tập con của `full` (158.774 user),
+  cùng `train.parquet`/`test.parquet` — khác biệt duy nhất là ai được chấm điểm. NDCG@10
+  lệch ≤ 1,7% và **thứ hạng không đảo** → dùng biên độ sweep (`dev`) trong báo cáo là
+  hợp lệ, nhưng **phải ghi rõ mức user của từng bảng**.
+- **Điểm quan trọng về ALS:** nhạy với `α` (α=40 → 0,113470, tức −18% so với α=5 =
+  0,137905) chứ **không** nhạy với `reg`/`iterations` (biên độ 0,40% trong lát cắt đó).
+  Biên độ **toàn lưới ALS 15 config là 17,94%** theo công thức `(max−min)/max`; nếu
+  dùng mẫu số trung bình thì ra 18,65% — hai tài liệu phải ghi **cùng một quy ước**.
 - **Hình:** thanh ngang so sánh NDCG@10 toàn sweep CF vs CB
+  (`results/figures/results-sweep-range.png`)
 
 ### 5.3 Cold-start item — kết luận đảo chiều (2 trang)
 **Người 2**
