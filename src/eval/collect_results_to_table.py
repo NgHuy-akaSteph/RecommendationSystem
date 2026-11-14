@@ -20,9 +20,18 @@ DISPLAY_COLS = ["exp_name", "model", "P@10", "R@10", "NDCG@10", "HR@10",
                 "NDCG@20", "fit_s", "score_s", "n_eval_users", "params"]
 # Bảng ablation giữ thứ tự bước (theo exp_name) chứ không sắp theo metric: người đọc
 # cần thấy metric biến thiên thế nào qua từng bước tối ưu.
+#
+# Mỗi nhóm gồm **nhiều tiền tố** vì sweep CF không dùng một tiền tố chung: `cf-*`
+# (ALS + ItemKNN) và `rs-*` (Item-CF, BPR — model cũ của repo CB) là hai họ riêng.
+# Trước đây bảng CF chỉ lấy `cf-` (18 dòng) trong khi tài liệu tuyên bố "CF đã quét
+# 51 config" — bằng chứng không khớp tuyên bố. Nay lấy cả hai họ (51 dòng).
 ABLATION_GROUPS = {"cb1": "ablation-cb1.csv", "cb3": "ablation-cb3.csv",
                    "cb2": "ablation-cb2.csv", "cb4": "ablation-cb4.csv",
                    "cf": "ablation-cf.csv"}
+# Tiền tố exp_name của từng nhóm ablation. Nhóm CF có hai tiền tố vì sweep CF gồm
+# cả họ `cf-` (ALS, ItemKNN) lẫn họ `rs-` (Item-CF, BPR).
+ABLATION_PREFIXES = {"cb1": ("cb1-",), "cb2": ("cb2-",), "cb3": ("cb3-",),
+                     "cb4": ("cb4-",), "cf": ("cf-", "rs-")}
 # Tiền tố do run_experiment_from_config.experiment_name gắn thêm khi đổi giao thức.
 # Phải bóc ra trước khi đối chiếu với configs/, nếu không mọi kết quả full/cold-start đều
 # bị guard chống kết quả mồ côi loại nhầm.
@@ -87,9 +96,11 @@ def write_ablation_tables(results_dir: Path | None = None) -> dict[str, Path]:
     rdir = results_dir or paths.RESULTS_DIR
     written = {}
     for group, filename in ABLATION_GROUPS.items():
-        df = collect(rdir, sort_by=None, prefix=f"{group}-")
+        prefixes = ABLATION_PREFIXES[group]
+        df = collect(rdir, sort_by=None)
+        df = df[df["exp_name"].str.startswith(prefixes)]
         if df.empty:
-            print(f"  bỏ qua {filename}: chưa có kết quả nào cho '{group}-'")
+            print(f"  bỏ qua {filename}: chưa có kết quả nào cho {prefixes}")
             continue
         df = df.sort_values("exp_name")
         out = rdir / filename

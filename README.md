@@ -183,9 +183,9 @@ Cả hai nhóm đã được quét **đủ** trong repo này, nên so sánh khô
 | CF (ALS + Item-CF + BPR) | 51 | **51** | 0 |
 | CB (CB-1…CB-4) | 93 | **93** | 0 |
 
-Bằng chứng từng config nằm ở `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (111 dòng,
-mỗi dòng mang `params` + `split_id`/`catalog_id`) — người đọc repo kiểm chứng được "đã quét
-đủ" mà không phải tin lời.
+Bằng chứng từng config nằm ở `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (144 dòng:
+51 CF + 93 CB, mỗi dòng mang `params` + `split_id`/`catalog_id`) — người đọc repo kiểm
+chứng được "đã quét đủ" mà không phải tin lời.
 
 Sau khi sweep đủ, **kết luận đổi chiều so với bản trước**: CB không chỉ "thua sát" mà
 thua rõ ở giao thức thường — 0,1054 (CB-4 Hybrid) so với 0,1375 (ALS), chênh **23%**.

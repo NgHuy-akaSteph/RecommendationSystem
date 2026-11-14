@@ -17,7 +17,7 @@ công bố.
 |---|---|---|
 | 1 | `README.md` + changelog ghi thứ hạng "CB-1 > CB-2 > CB-3" ở bảng phân tầng kỷ nguyên — **ngược lại** với `results/final/tag-leakage-strata.csv` (CB-2 dẫn ở cả 3 tầng) | Sửa thành "CB-2 ≥ CB-1 > CB-3", bổ sung số ở cả 3 tầng để người đọc tự kiểm |
 | 2 | Số config sweep ghi "CB 85" — thực tế **93** (sweep mở rộng thêm 8 config CB sau đó) | Sửa 85 → 93 ở README, `benchmark_tables.py`, `build_final_tables.py`, phase-03 docs; changelog giữ 85 kèm đính chính để làm lịch sử |
-| 3 | `results/ablation-*.csv` (111 dòng bằng chứng sweep) bị gitignore → luận điểm "đã cân bằng sweep" **không kiểm chứng được** từ repo | Copy 5 bảng vào `results/final/` để commit |
+| 3 | `results/ablation-*.csv` (144 dòng bằng chứng sweep) bị gitignore → luận điểm "đã cân bằng sweep" **không kiểm chứng được** từ repo | Copy 5 bảng vào `results/final/` để commit |
 | 4 | 38 file `*_metrics.csv` thiếu cột `split_id`/`catalog_id` (chạy trước khi thêm cột) → `dev-summary.csv` mất bằng chứng protocol ở dòng CB-4 | Chạy lại 7 config có trong bảng ablation, sinh lại bảng |
 | 5 | Thiếu `docs/codebase-summary.md`, `docs/system-architecture.md`, `docs/development-roadmap.md` (chuẩn dự án) | Viết mới 3 file |
 | 6 | `scripts/run_shared_benchmark.py` thiếu `best-cb4-hybrid-content.yaml` trong `CONFIGS` → chạy lại sẽ fail `benchmark-cb.csv` | Thêm config + test chặn tách lệch runner/bảng |
@@ -29,6 +29,7 @@ công bố.
 | `test_docs_state_real_sweep_counts` | Đối chiếu số config trong tài liệu với `configs/` thật (không hard-code) |
 | `test_final_tables_have_protocol_evidence` | Mọi dòng trong `results/final/*-summary.csv` + `benchmark-*.csv` phải có `split_id`/`catalog_id` khác rỗng |
 | `test_ablation_tables_have_protocol_evidence` | Mọi dòng trong `results/final/ablation-*.csv` phải có bằng chứng protocol, không trùng `exp_name` |
+| `test_ablation_covers_every_config_of_its_group` | Bảng ablation phải phủ **đúng** mọi config của nhóm — không thiếu (thiếu 33/51 dòng CF) không thừa |
 | `test_shared_benchmark_covers_all_table_specs` | `CONFIGS` của runner phải ⊇ mọi config trong `CF_SPECS + CB_SPECS` |
 | `test_docs_do_not_claim_cb1_above_cb2` | Cấm tuyên bố thứ hạng CB sai trong README/changelog |
 
@@ -42,6 +43,47 @@ công bố.
 | `build_final_tables.py` | Chỉ `dev-summary.csv` thay đổi (vá cột bằng chứng); 26 bảng còn lại giữ nguyên |
 | `git add -An --dry-run results/` | 22 bảng final đã track + 5 bảng ablation mới + `dev-summary.csv` sửa |
 | Bảng ablation | 111 dòng, **100% có `split_id` + `catalog_id`** |
+
+---
+
+## 2026-11-14 — Viết lại khung báo cáo: bằng chứng sweep CF chỉ phủ 18/51 config
+
+**Phạm vi:** Viết khung báo cáo mới (`notes/report-structure.md`) khớp với hiện trạng thực
+tế (25M / 9 mô hình). Khung cũ viết cho MovieLens 1M / 2 methods / 18 config — lệch
+hoàn toàn.
+
+### Vấn đề phát hiện khi đối chiếu khung với `results/final/`
+
+Mỗi con số trong khung báo cáo phải **đối chiếu được** với bảng kết quả — nếu không,
+khung chỉ là bản chép lại của chính những sai lệch đã sửa. Đối chiếu lộ ra:
+
+| | Tuyên bố | Bằng chứng commit |
+|---|---|---|
+| Sweep CF | 51 config | `ablation-cf.csv` chỉ **18 dòng** |
+
+**Nguyên nhân:** `collect_results_to_table.write_ablation_tables` lọc bằng
+`prefix="cf-"`, bỏ sót họ `rs-*` (Item-CF, BPR — model port từ repo `recommendation-cb`).
+33 config `rs-*` đã chạy trên `dev` nhưng không bao giờ vào bảng bằng chứng.
+
+Sửa collector → lộ tiếp: 31 trong 33 file metrics `rs-*` **chạy trước khi thêm cột
+`split_id`/`catalog_id`** → không có bằng chứng protocol.
+
+### Đã làm
+
+| Việc | Chi tiết |
+|---|---|
+| Sửa collector | `ABLATION_PREFIXES` cho phép mỗi nhóm nhiều tiền tố; nhóm CF lấy cả `cf-` và `rs-` |
+| Chạy lại | 30 config `rs-*` trên `dev` (30/30 OK, 0 lỗi) |
+| Kiểm chứng số liệu | **NDCG@10 không đổi 1 chữ số** cho cả 33 file `rs-*` (diff < 1e-12) — đây là vá bằng chứng, không phải đổi kết quả |
+| Sinh lại bảng | `ablation-*.csv` giờ có **144 dòng = 51 CF + 93 CB**, 100% có `split_id` + `catalog_id`, `exp_name` không trùng |
+| Test mới | `test_ablation_covers_every_config_of_its_group` — bảng ablation phải phủ **đúng** mọi config của nhóm, không thiếu không thừa |
+| Viết khung | `notes/report-structure.md` — 8 chương, 40–45 trang, mọi số liệu đã đối chiếu |
+
+### Vì sao đáng sửa dù không nằm trong plan
+
+Luận điểm trung tâm của báo cáo là "CF thắng CB **đã cân bằng về sweep**". Bằng chứng
+thiếu 33/51 dòng CF thì tuyên bố đó **không kiểm chứng được từ repo** — người đọc
+mở `ablation-cf.csv` thấy 18 dòng sẽ tự hỏi 33 config kia ở đâu.
 
 ---
 

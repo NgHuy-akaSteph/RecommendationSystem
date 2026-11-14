@@ -143,8 +143,8 @@ Hai mô hình **không** nằm trong bảng chính nhưng vẫn có trong regist
 | `best-*` | 13 | Config đã khoá tham số, dùng cho bảng chính |
 
 Tất cả 159 config đều **đã chạy** trên `dev` (20.000 user) — bằng chứng từng config nằm
-ở `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (111 dòng, mỗi dòng mang `params` +
-`split_id`/`catalog_id`).
+ở `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (144 dòng: 51 CF + 93 CB, mỗi dòng
+mang `params` + `split_id`/`catalog_id`).
 
 ---
 
@@ -165,7 +165,7 @@ Tất cả 159 config đều **đã chạy** trên `dev` (20.000 user) — bằn
 | Phân tầng | `coldstart-user-buckets.csv` | Metric theo độ dài lịch sử user |
 | | `tag-leakage-strata.csv`, `tag-leakage-summary.csv` | Chống rò rỉ tag theo kỷ nguyên |
 | | `weight-mode-buckets.csv`, `weight-mode-paired-tests.csv` | So 3 chế độ trọng số hồ sơ |
-| Sweep | `ablation-{cf,cb1,cb2,cb3,cb4}.csv` | 111 dòng bằng chứng đã quét đủ |
+| Sweep | `ablation-{cf,cb1,cb2,cb3,cb4}.csv` | 144 dòng bằng chứng đã quét đủ (51 CF + 93 CB) |
 | Dữ liệu | `dataset-summary.csv` | Thống kê dataset |
 
 ---

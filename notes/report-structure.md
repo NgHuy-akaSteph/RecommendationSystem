@@ -1,691 +1,540 @@
-# Khung Báo Cáo Recommendation System
+# Khung Báo Cáo — Recommendation System (MovieLens 25M)
 
-**Tổng số trang:** 35-40 trang  
-**Dataset:** MovieLens 1M  
-**Methods:** Popularity Baseline + Collaborative Filtering (ALS) + Content-based (TF-IDF)  
-**Timeline:** 4 tuần
+**Tổng số trang:** 40–45 trang
+**Dataset:** MovieLens 25M (lọc còn 13.816 phim có Tag Genome)
+**Mô hình:** 9 mô hình — 3 CF, 4 Content-based, 2 baseline
+**Nguồn sự thật:** mọi số liệu trong khung này lấy từ `results/final/` (27 bảng) và
+`results/figures/` (9 hình), đã commit trong repo. Không chép tay số.
+
+> **Khung này thay thế hoàn toàn** `notes/report-structure.md` cũ (viết cho MovieLens 1M,
+> 2 methods, 18 config — lệch toàn bộ với hiện trạng).
 
 ---
 
 ## Abstract (1 trang)
 
-**Người chịu trách nhiệm:** Người Phụ 3
+**Người phụ trách:** Người Phụ C
 
-**Nội dung:**
-- Tóm tắt 150-200 từ
-- Problem statement
-- Methods overview
-- Dataset info
-- Key results và findings
+**Nội dung — 4 khối, mỗi khối 2–3 câu:**
+1. **Bối cảnh:** CF và Content-based là hai hướng chính; mỗi hướng thắng ở một vùng
+   bài toán (CF khi lịch sử tương tác dày, CB khi phim mới chưa có tương tác).
+2. **Phương pháp:** hợp nhất 9 mô hình trên **một giao thức đánh giá duy nhất** (full
+   ranking, split thời gian 80/20 theo từng user, ngưỡng relevant ≥ 4,0), với 3 giao
+   thức (`dev` / `full` / `coldstart`) và bằng chứng protocol `split_id` + `catalog_id`
+   trên từng dòng kết quả.
+3. **Kết quả chính:** CF thắng CB ở giao thức thường (ALS 0,1375 vs CB-4 0,1054 —
+   chênh 23%, đã cân bằng sau sweep 51 CF / 93 CB config); **CB thắng áp đảo ở
+   cold-start item** (mọi mô hình CF = 0,0000, CB đạt 0,0347).
+4. **Đóng góp:** kết luận "CF thắng" trước đây bị nghi ngờ thiên lệch về độ bao phủ
+   sweep — báo cáo này cân bằng được điều đó, đồng thời phân tầng 3 kỷ nguyên để chứng
+   minh tín hiệu content không đảo chiều theo thời gian (chống rò rỉ metadata hậu kỳ).
+
+**Từ khóa:** recommender systems, collaborative filtering, content-based filtering,
+cold-start, MovieLens 25M, offline evaluation, NDCG
 
 ---
 
 ## Chapter 1: Introduction (3 trang)
 
-**Người chịu trách nhiệm:** Người Phụ A
+**Người phụ trách:** Người Phụ A
 
-### 1.1 Background and Motivation
-- Vai trò recommendation systems trong ecommerce
-- Tầm quan trọng của personalization
-- Động lực nghiên cứu
+### 1.1 Bối cảnh và động lực
+- Vai trò personalization trong streaming/ecommerce
+- Bài toán xếp hạng (top-N) khác bài toán dự đoán rating — ảnh hưởng trực tiếp tới
+  lựa chọn metric (không dùng RMSE/MAE)
 
-### 1.2 Problem Statement
-- Bài toán cụ thể cần giải quyết
-- Challenges trong recommendation
-- Gap trong literature
+### 1.2 Câu hỏi nghiên cứu
+> **RQ1:** Với cùng một giao thức đánh giá và độ bao phủ sweep tương đương, CF và
+> Content-based thắng ở đâu?
+> **RQ2:** Điều gì xảy ra khi phim mới chưa có tương tác nào (cold-start item)?
+> **RQ3:** Liệu kết luận có bị đảo chiều nếu phân tầng theo thời kỳ người dùng —
+> tức là liệu tín hiệu content có "biết trước" phim tương lai không?
 
-### 1.3 Research Objectives
-- Mục tiêu chính (implement CF và Content-based)
-- So sánh performance hai methods
-- Đánh giá trên implicit feedback dataset
+### 1.3 Đóng góp của đồ án
+1. **Một giao thức, một đường chạy** — không còn hai evaluator song song như ở protocol cũ
+2. **Bằng chứng protocol trên từng dòng kết quả** (`split_id` + `catalog_id` + `seed`)
+3. **Sweep cân bằng** (51 CF / 93 CB) — biến kết luận "thắng" từ thiên lệch thành có cơ sở
+4. **Phân tầng kỷ nguyên** — đo trực tiếp rủi ro rò rỉ metadata hậu kỳ
+5. **Kết luận đảo chiều ở cold-start** — nêu rõ điều kiện để mỗi hướng thắng
 
-### 1.4 Scope and Limitations
-- Phạm vi nghiên cứu (MovieLens 1M, 2 methods)
-- Limitations (không cover deep learning, hybrid advanced)
+### 1.4 Phạm vi và giới hạn
+| Phạm vi | Ngoài phạm vi |
+|---|---|
+| MovieLens 25M, explicit rating, offline | Deep learning, session-based |
+| 9 mô hình (không deep learning) | Demo/deploy, A/B test |
+| Full ranking, 3 giao thức | Bảng no-leak (mất 66% user) |
+| Metadata hậu kỳ — **phải nêu rõ** | Hybrid CF+CB ở tầng late fusion |
 
-### 1.5 Report Organization
-- Overview structure của báo cáo
+### 1.5 Cấu trúc báo cáo
+- Mỗi chương trả lời RQ nào (đặt ở đầu chương)
 
 ---
 
 ## Chapter 2: Literature Review & Theoretical Background (8 trang)
 
-### 2.1 Recommendation Systems Overview (1 trang)
+**Người phụ trách:** Người 1 (2.2) + Người 2 (2.3–2.4) + Người Phụ A (2.1)
 
-**Người chịu trách nhiệm:** Người Phụ A
+### 2.1 Tổng quan về hệ thống gợi ý (1 trang)
+- Định nghĩa, ứng dụng, phân loại: Content-based / CF / Hybrid / Knowledge-based
+- Bảng so sánh nhanh ưu – nhược – điều kiện thắng
 
-- Definition của recommendation systems
-- Applications (ecommerce, streaming, social media)
-- Classification of approaches:
-  - Content-based
-  - Collaborative Filtering
-  - Hybrid
-  - Knowledge-based
-  - Deep learning-based (brief mention)
+### 2.2 Collaborative Filtering (3,5 trang)
+**Người 1**
 
-### 2.2 Collaborative Filtering (4 trang)
+#### 2.2.1 User-based CF (0,5 trang)
+- Trực giác, độ đo tương đồng (cosine, Pearson), ưu/nhược
 
-**Người chịu trách nhiệm:** Người 1
-
-#### 2.2.1 User-based Collaborative Filtering (1 trang)
-- Intuition: "Users like you also liked..."
-- Similarity metrics (Cosine, Pearson)
-- Ưu điểm và nhược điểm
-- Example minh họa
-
-#### 2.2.2 Item-based Collaborative Filtering (1 trang)
-- Intuition: "Customers who bought X also bought Y..."
-- Why more scalable than user-based
-- Item similarity computation
-- Ưu điểm và nhược điểm
+#### 2.2.2 Item-based CF (1 trang)
+- Trực giác "người xem phim này cũng xem phim kia", vì sao scale tốt hơn user-based
+- Quan hệ với hàng đầu mục trong đồ án: `rs-itemcf` (trọng số rating thật) và
+  `cf-itemknn` (trọng số nhị phân)
 
 #### 2.2.3 Matrix Factorization (1 trang)
-- Concept: decompose user-item matrix thành latent factors
-- User embedding × Item embedding
-- Intuition về latent factors (không đi sâu công thức)
-- Example: Movie preferences = (Action, Romance, Comedy) scores
+- Phân rã user–item thành latent factor, trực giác
 
-#### 2.2.4 ALS for Implicit Feedback (1 trang)
-- Paper reference: Hu, Koren, Volinsky (2008)
-- Explicit vs Implicit feedback
-- Confidence weighting concept
-- Why ALS suitable cho ecommerce data
-- Brief algorithm overview (không heavy math)
+#### 2.2.4 ALS cho implicit feedback (1 trang)
+- Hu, Koren & Volinsky (2008): confidence weighting
+- **Vì sao chỉ dùng tương tác relevant** (rating ≥ 4) → `c_ui = 1 + α`, không phải `1 + α·rating`
+- Tóm tắt thuật toán (không nặng toán)
 
-**Key References:**
-- Hu, Y., Koren, Y., & Volinsky, C. (2008). Collaborative filtering for implicit feedback datasets. ICDM.
-- Koren, Y., Bell, R., & Volinsky, C. (2009). Matrix factorization techniques for recommender systems. IEEE Computer.
+**Tài liệu tham khảo chính:**
+- Hu, Koren, Volinsky (2008). Collaborative filtering for implicit feedback datasets. *ICDM*.
+- Koren, Bell, Volinsky (2009). Matrix factorization techniques for recommender systems. *Computer*, 42(8).
+
+#### 2.2.5 BPR-MF (0,5 trang)
+- Rendle et al. (2009): pairwise ranking loss, negative sampling
+- Vì sao `num_threads=1` (tái lập được tuyệt đối, đánh đổi 40s thay vì 7s)
 
 ### 2.3 Content-based Filtering (2 trang)
+**Người 2**
 
-**Người chịu trách nhiệm:** Người 2
+#### 2.3.1 Biểu diễn đặc trưng (0,5 trang)
+- 3 nguồn: genres (19), tag (30.067 từ sau làm sạch), Tag Genome (1.128 chiều)
 
-#### 2.3.1 Feature Extraction
-- Item features (text, category, metadata)
-- Feature representation methods
+#### 2.3.2 TF-IDF và BM25 (1 trang)
+- Công thức TF-IDF, định nghĩa BM25 (`k1`, `b`)
+- **Vì sao BM25 hay hơn TF-IDF ở đây** — bằng chứng từ `tag-leakage-strata.csv`
 
-#### 2.3.2 TF-IDF and Similarity Measures
-- TF-IDF intuition và formula
-- Cosine similarity
-- Similarity-based recommendation
+#### 2.3.3 Cách dựng hồ sơ user (0,5 trang)
+- Trung bình có trọng số của vector item; 3 chế độ trọng số `binary_pos` /
+  `centered` / `rating` (+ time-decay)
 
-#### 2.3.3 Advantages for Cold-start
-- New item problem solution
-- No need interaction history
-- Trade-offs vs CF
+#### 2.3.4 Tag Genome và vấn đề metadata hậu kỳ (0,5 trang)
+- Nhóm tính ngoài dõi, không có timestamp
+- **Đây là mục rủi ro phải nêu trước khi trích dẫn kết quả CB**
 
-### 2.4 Evaluation Metrics for Ranking (1 trang)
-
-**Người chịu trách nhiệm:** Người 2
-
-- Why not RMSE/MAE for ranking tasks
-- **Precision@K**: accuracy trong top-K
-- **Recall@K**: coverage của relevant items
-- **NDCG@K**: reward higher ranks
-- **MAP@K**: mean average precision
-- Trade-offs between metrics
+### 2.4 Metric đánh giá bài toán xếp hạng (1,5 trang)
+**Người 2**
+- Vì sao không dùng RMSE/MAE
+- Precision@k, Recall@k, HR@k, NDCG@k (định nghĩa Järvelin & Kekäläinen 2002)
+- **Định nghĩa đúng `P@k = hits / k`** — phân biệt với `hits / len(top_k)`
+- Metric ngoài độ chính xác: Coverage, Gini, Novelty, ILD, `frac_unseen`
+- Kiểm định thống kê: bootstrap CI 95%, Wilcoxon signed-rank ghép cặp
 
 ---
 
 ## Chapter 3: Dataset & Preprocessing (5 trang)
 
-**Người chịu trách nhiệm:** Người 1
+**Người phụ trách:** Người 1
 
-### 3.1 MovieLens 1M Overview (2 trang)
+### 3.1 MovieLens 25M — tổng quan (1,5 trang)
 
-#### Data Structure
-- **ratings.dat**: 1,000,209 ratings
-  - Fields: user_id, movie_id, rating (1-5), timestamp
-- **movies.dat**: 3,883 movies
-  - Fields: movie_id, title, genres
-- **users.dat**: 6,040 users
-  - Fields: user_id, gender, age, occupation, zip
+#### Nội dung 7 file thô
+| File | Dòng | Nội dung |
+|---|---:|---|
+| `ratings.csv` | 25.000.095 | `userId,movieId,rating,timestamp` |
+| `movies.csv` | 62.423 | `movieId,title,genres` |
+| `tags.csv` | 1.093.360 | tag do người dùng tự gán (có timestamp) |
+| `genome-scores.csv` | 15.584.448 | Tag Genome |
+| `genome-tags.csv` | 1.128 | tên tag của genome |
 
-#### Statistics
-- Table: Basic statistics summary
-  - Total ratings, users, movies
-  - Rating distribution (1-5)
-  - Average ratings per user/movie
-  - Sparsity: ~95.8% sparse
-- Timespan của dataset
+- Khoảng thời gian 1995–2019; 162.540 user, 62.423 phim; giấy phép GroupLens (cấm phân phối lại)
 
-#### Data Characteristics
-- Explicit ratings (1-5 stars)
-- Temporal information available
-- Multiple genres per movie
-- User demographic info (optional use)
+#### Thống kê sau tiền xử lý (bảng `dataset-summary.csv`)
+| Chỉ số | Giá trị |
+|---|---:|
+| Số user | 162.540 |
+| Số item | 13.816 |
+| Số rating | 24.674.113 |
+| Mật độ ma trận | 1,0988% |
+| Rating ≥ 4 | 50,1% |
+| Rating trung bình | 3,54 |
+| Rating/user (trung vị / p90) | 71 / 351 |
+| Rating thuộc 20% phim phổ biến nhất | 84,4% |
+| Tag/phim (trung vị) | 21 |
 
-### 3.2 Exploratory Data Analysis (2 trang)
+### 3.2 Phân tích khám phá dữ liệu (1,5 trang)
 
-**Visualizations required:**
+**Hình cần dùng (đã có trong `results/figures/`):**
+1. `eda-distributions.png` — phân phối rating, phân phối tương tác/user
+2. `eda-long-tail.png` — đường cong long-tail của độ phổ biến phim
+3. `eda-content-features.png` — phân bố thể loại / số tag / độ dài tài liệu
+4. `eda-genome.png` — phân bố điểm genome, độ tương quan cosine giữa hai phim
 
-1. **Rating Distribution** (histogram)
-   - Frequency của mỗi rating (1-5)
-   - Mean rating: ~3.58
+**Phát hiện chính:**
+- Long-tail rất lệch (84,4% rating nằm trong 20% phim phổ biến nhất) → CF dễ dồn suất
+- 183 phim không có tag → cần xử lý riêng
+- Tag bắt đầu xuất hiện từ **2005-12-24** — mốc quan trọng cho Chương 6
 
-2. **User Interaction Distribution** (histogram + log scale)
-   - Long-tail: few power users, many casual users
-   - Percentiles (P50, P75, P90, P95)
+### 3.3 Tiền xử lý (2 trang)
 
-3. **Item Popularity Distribution** (histogram + log scale)
-   - Long-tail: few blockbusters, many niche movies
-   - Percentiles
+#### 3.3.1 Lọc catalog theo Tag Genome (0,5 trang)
+- Giữ 13.816 phim có genome, **giữ 98,7% khối lượng rating**
+- **Lý do:** mọi mô hình phải so sánh trên *cùng* tập ứng viên — nếu không, CB-3
+  không thể chạy và so sánh không công bằng
 
-4. **Ratings Over Time** (line chart)
-   - Temporal patterns
-   - Activity trends
+#### 3.3.2 Làm sạch đặc trưng nội dung (0,5 trang)
+- 1.093.360 lượt gán tag → 937.428 lượt sau làm sạch → 30.067 từ khác nhau
+- 13.633/13.816 phim có ≥ 1 tag
 
-5. **Sparsity Heatmap** (100x100 sample)
-   - Visualize sparse nature
+#### 3.3.3 Chia tập thời gian theo từng user (1 trang)
+- **Phương pháp:** trong mỗi user, sort theo timestamp, lấy 80% đầu → train, 20% cuối → test
+- **Điều kiện giữ lại user:** train ≥ 5 tương tác **và** test có ≥ 1 rating ≥ 4
+- **Kết quả:** 158.774 user hợp lệ (train 19.801.784 rating, test 4.831.397 rating,
+  trong đó 2.288.027 rating relevant)
 
-6. **Genre Distribution** (bar chart)
-   - Most common genres
-   - Genre co-occurrence
+> **Điểm phải nhấn:** split global 70/30 của protocol cũ chỉ đánh giá được **4.587 user**
+> (phần lớn user ML-25M ngừng hoạt động trước 2015 nên không có dữ liệu test).
+> Split per-user đánh giá được **158.774 user** — tăng 34,6 lần số user đánh giá.
 
-7. **Top 20 Popular Movies** (bar chart with titles)
-
-**Key Findings:**
-- Long-tail distribution (Pareto principle)
-- High sparsity challenges
-- Temporal patterns (if any)
-
-### 3.3 Data Preprocessing (1 trang)
-
-#### Filtering Strategy
-- **Min interactions threshold:** 5
-  - Remove users with <5 ratings
-  - Remove movies with <5 ratings
-- **Rationale:** reduce noise, improve model quality
-- **Impact:** số lượng users/items sau filter
-
-#### Train/Test Split
-- **Method:** Time-based split (80/20)
-  - Sort by timestamp
-  - First 80% → train
-  - Last 20% → test
-- **Why time-based:**
-  - Avoid data leakage
-  - Realistic evaluation (predict future from past)
-  - Industry standard practice
-- **Statistics:**
-  - Train set: ~800K ratings
-  - Test set: ~200K ratings
-
-#### Data Transformation
-- Convert to sparse matrix (scipy.sparse)
-- User/item ID mapping (continuous indices)
+#### 3.3.4 Dựng ma trận và chuẩn hoá chỉ số (0,5 trang)
+- Ma trận thưa CSR, remap chỉ số user/item về 0..n-1
+- Ngưỡng relevant: rating ≥ 4,0 (`RELEVANCE_THRESHOLD`)
 
 ---
 
-## Chapter 4: Methodology (7 trang)
+## Chapter 4: Methodology (8 trang)
 
-### 4.1 Experimental Setup (1 trang)
+**Người phụ trách:** Người 1 (4.1–4.2, 4.4) + Người 2 (4.3, 4.5)
 
-**Người chịu trách nhiệm:** Người 1
+### 4.1 Thiết lập thực nghiệm (1 trang)
+**Người 1**
+- Môi trường: Python 3.12, `implicit`, `scipy`, `pandas`, `numpy`; seed = 42
+- Cấu trúc repo, hướng dẫn chạy lại (`docs/codebase-summary.md`)
+- **Tại sao cấu trúc `TrainData`/`Dataset` quan trọng** — mô hình không có đường nào chạm nhãn test
 
-#### Hardware & Software Environment
-- CPU/GPU specs (if applicable)
-- RAM
-- OS
+### 4.2 Baseline (0,5 trang)
+**Người 1**
+- **Random (sanity):** kiểm tra evaluator — mọi metric phải ≈ 0
+- **MostPop:** xếp hạng theo số lượt rating relevant trong train
 
-#### Implementation Libraries
-- Python 3.x
-- pandas, numpy, scipy
-- scikit-learn
-- **implicit** library (for ALS)
-- matplotlib, seaborn (visualization)
+### 4.3 Mô hình Content-based (3 trang)
+**Người 2**
 
-#### Code Repository
-- GitHub/GitLab link (if available)
+| Mô hình | Cấu hình | Ghi chú |
+|---|---|---|
+| CB-1 TF-IDF | TF-IDF trên tag + genres | sweep 15 config |
+| CB-2 BM25 | BM25 trên tag, lưới `k1` × `b` | sweep 21 config |
+| CB-3 Tag Genome | 1.128 chiều genome, chuẩn hoá z-score/min-max, SVD | sweep 22 config |
+| CB-4 Hybrid | Late fusion BM25 + Genome | sweep 35 config |
 
-### 4.2 Baseline Model: Popularity-based (1 trang)
+- **Cơ chế late fusion:** chuẩn hoá điểm rồi tổng trọng số (`w`)
+- **Bẫy `pop_prior`:** bản có λ_pop = 0,4 đạt NDCG@10 = 0,1081 ở giao thức thường
+  (cao hơn bản content thuần 0,1054) nhưng **sụp về 0,0010 ở cold-start** vì mọi phim
+  held-out có popularity = 0 → `frac_unseen@10` rơi từ 0,2223 xuống 0,0036.
+  → **Bảng chính lấy bản content thuần**; bản có prior chỉ để đối chiếu.
 
-**Người chịu trách nhiệm:** Người 1
+### 4.4 Mô hình Collaborative Filtering (2 trang)
+**Người 1**
 
-#### Algorithm
-- Rank items by total interaction count
-- Recommend top-N popular items to all users
-- No personalization
+| Mô hình | Thư viện / cài đặt | Ghi chú |
+|---|---|---|
+| ALS | `implicit.als.AlternatingLeastSquares` | `c_ui = 1 + α`, chỉ relevant, `factors`/`α`/`reg`/`iterations` |
+| Item-CF (RS) | tự cài, trọng số = **rating thật** | sweep `k_neighbors`, `weight_mode` |
+| BPR-MF | `implicit.bpr` | `num_threads=1` — tái lập được tuyệt đối |
+| ItemKNN-CF | tự cài, trọng số **nhị phân** | trong registry, không vào bảng chính |
 
-#### Implementation
-```python
-class PopularityRecommender:
-    def fit(self, train_df):
-        self.popular_items = train_df['movie_id'].value_counts().index
-    
-    def recommend(self, user_id, n=10):
-        return self.popular_items[:n]
-```
+### 4.5 Giao thức đánh giá (1,5 trang)
+**Người 2**
 
-#### Why Baseline
-- Minimum performance threshold
-- Surprisingly effective for new/cold users
-- Benchmark for personalized methods
+#### 4.5.1 Ba giao thức
+| Giao thức | User | Dùng để |
+|---|---:|---|
+| `dev` | 20.000 | **chọn tham số** (sweep 159 config) |
+| `full` | 158.774 | bảng chính — chạy **một lần** sau khi khoá config |
+| `coldstart` | 10.992 | cold-start item (1.381 phim giữ lại theo 5 nhóm năm phát hành) |
 
-### 4.3 Collaborative Filtering with ALS (3 trang)
+#### 4.5.2 Vì sao full ranking, không sampled
+- Chấm trên toàn bộ 13.816 ứng viên; sampled LOO có thể đảo thứ hạng (Krichene & Rendle 2020)
+- Giao thức thay thế LOO + 100 negative đã cài nhưng **chưa chạy** — nêu rõ trong phần giới hạn
 
-**Người chịu trách nhiệm:** Người 1
-
-#### Model Architecture
-- Matrix Factorization approach
-- User matrix U (6040 × K)
-- Item matrix V (3883 × K)
-- K = latent factors (hyperparameter)
-
-#### Alternating Least Squares (ALS)
-- Optimization algorithm
-- Fix U, optimize V
-- Fix V, optimize U
-- Iterate until convergence
-
-#### Confidence Weighting
-- Explicit ratings → implicit confidence
-- Higher rating = higher confidence
-- Confidence formula (if applicable)
-
-#### Hyperparameter Configuration
-
-**Grid Search:**
-| Parameter | Values Tested |
-|-----------|---------------|
-| Factors (K) | [20, 50, 100] |
-| Regularization | [0.01, 0.1] |
-| Iterations | [15, 20, 30] |
-
-**Total combinations:** 18
-
-#### Training Procedure
-1. Load train matrix (user-item sparse matrix)
-2. Initialize model with hyperparameters
-3. Fit model using ALS
-4. Generate recommendations (top-N per user)
-
-#### Computational Complexity
-- Time complexity: O(iterations × K × (users + items) × nnz)
-- Training time per configuration: ~X seconds
-
-### 4.4 Content-based Filtering (2 trang)
-
-**Người chịu trách nhiệm:** Người 2
-
-#### Feature Engineering
-- Extract genres from movies.dat
-- TF-IDF vectorization on genres
-- Movie feature vectors (3883 × vocab_size)
-
-#### Similarity Computation
-- Cosine similarity between all movie pairs
-- Similarity matrix (3883 × 3883)
-
-#### Recommendation Generation
-1. Get user's watched movies from train
-2. For each watched movie, find K most similar
-3. Aggregate similarity scores
-4. Rank and return top-N
+#### 4.5.3 Bằng chứng protocol
+- Mỗi dòng kết quả mang `split_id` + `catalog_id` + `seed`
+- **Không có các cột này, "cùng giao thức" chỉ là lời tuyên bố**
 
 ---
 
-## Chapter 5: Experimental Results (7 trang)
+## Chapter 5: Experimental Results (8 trang)
 
-### 5.1 Evaluation Protocol (1 trang)
+**Người phụ trách:** Người 1 (5.2) + Người 2 (5.3)
 
-**Người chịu trách nhiệm:** Người 2
+### 5.1 Kết quả chính — bảng chung (2 trang)
+**Người 2**
 
-#### Metrics Used
-- Precision@K
-- Recall@K
-- NDCG@K
-- K values: [5, 10, 20]
+**Bảng CF (`full`, 158.774 user) — `benchmark-cf.csv`:**
+| Mô hình | NDCG@10 | | Bảng CB (`full`) — `benchmark-cb.csv`: | NDCG@10 |
+|---|---:|---|---|---:|
+| ALS | **0,1375** | | CB-4 Hybrid | **0,1054** |
+| Item-CF (RS) | 0,1290 | | CB-2 BM25 | 0,0998 |
+| BPR (RS) | 0,1099 | | CB-1 TF-IDF | 0,0937 |
+| MostPop | 0,0739 | | CB-3 Tag Genome | 0,0713 |
+| Random | 0,0012 | | | |
 
-#### Evaluation Process
-- For each user in test set:
-  - Get true relevant items (rated ≥4)
-  - Generate top-K recommendations
-  - Compute metrics
-- Average across all users
+**Hình:** `results-accuracy.png`, `results-metric-vs-k.png`
 
-#### Implementation
-```python
-def evaluate_model(model, test_df, k=10):
-    # Pseudo-code
-    precision = compute_precision_at_k()
-    recall = compute_recall_at_k()
-    ndcg = compute_ndcg_at_k()
-    return {precision, recall, ndcg}
-```
+**Diễn giải:** CF thắng CB-4 **23%** ở `full`.
 
-### 5.2 Baseline Results (1 trang)
+### 5.2 Cân bằng sweep — kết luận "CF thắng" có cơ sở chưa? (2 trang)
+**Người 1**
 
-**Người chịu trách nhiệm:** Người 1
+| Nhóm | Config trong `configs/` | Đã chạy | Chưa chạy |
+|---|---:|---:|---:|
+| CF (ALS + Item-CF + BPR) | 51 | **51** | 0 |
+| CB (CB-1…CB-4) | 93 | **93** | 0 |
 
-#### Popularity Model Performance
+- **Bằng chứng:** `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (144 dòng = 51 CF + 93 CB,
+  mỗi dòng mang `params` + `split_id`/`catalog_id`) — người đọc kiểm chứng được mà không phải tin lời
+- **Đường biên độ toàn sweep:** CF 17,94% (0,1135→0,1383); CB-1 96,06%, CB-3 95,72%,
+  CB-4 32,00%, CB-2 16,82%
+- **Điểm quan trọng về ALS:** nhạy với `α` (α=40 sụp 18%) chứ **không** nhạy với
+  `reg`/`iterations` (biên độ 0,40% trong lát cắt đó)
+- **Hình:** thanh ngang so sánh NDCG@10 toàn sweep CF vs CB
 
-**Results Table:**
-| Metric | K=5 | K=10 | K=20 |
-|--------|-----|------|------|
-| Precision@K | 0.XXX | 0.XXX | 0.XXX |
-| Recall@K | 0.XXX | 0.XXX | 0.XXX |
-| NDCG@K | 0.XXX | 0.XXX | 0.XXX |
+### 5.3 Cold-start item — kết luận đảo chiều (2 trang)
+**Người 2**
 
-#### Observations
-- Decent performance despite no personalization
-- Good for cold-start users
-- Ceiling for comparison
+| Mô hình | NDCG@10 (`coldstart`) | NDCG@10 (`full`) |
+|---|---:|---:|
+| CB-4 Hybrid | **0,0347** | 0,1054 |
+| CB-1 TF-IDF | 0,0328 | 0,0937 |
+| CB-2 BM25 | 0,0306 | 0,0998 |
+| CB-3 Tag Genome | 0,0305 | 0,0713 |
+| ALS / Item-CF / BPR / MostPop | **0,0000** | 0,1375 / 0,1290 / 0,1099 / 0,0739 |
 
-### 5.3 Collaborative Filtering Results (3 trang)
+> **0,0000 là *đúng bằng không*, không phải "rất thấp":** mọi tương tác train của phim
+> held-out bị xoá, nên mô hình lọc cộng tác không có gì để học.
 
-**Người chịu trách nhiệm:** Người 1
+- `frac_unseen@10`: CB-4 = 0,2223 — có thể gợi ý phim chưa từng xem
+- **Wilcoxon:** CB-4 vs mọi mô hình CF đều `p < 1e-190`
+- **Hình:** `results-accuracy.png` (panel cold-start)
 
-#### Hyperparameter Tuning Results
+### 5.4 Kiểm định thống kê (1 trang)
+**Người 2**
+- **Bootstrap CI 95%** (`bootstrap-ci.csv`): ALS 0,1375 [0,1366, 0,1383] — không chạm
+  CI của CB-4 [0,1047, 0,1062]
+- **Wilcoxon signed-rank ghép cặp** (`wilcoxon-{cf,cb,coldstart}.csv`): chạy **trong từng
+  bảng**, không so chéo CF↔CB (hai bên được tinh chỉnh với số config khác nhau)
 
-**Grid Search Table (top 5 configs):**
-| Factors | Reg | Iterations | P@10 | R@10 | NDCG@10 |
-|---------|-----|------------|------|------|---------|
-| 100 | 0.01 | 30 | 0.XXX | 0.XXX | 0.XXX |
-| 50 | 0.01 | 30 | 0.XXX | 0.XXX | 0.XXX |
-| ... | ... | ... | ... | ... | ... |
-
-**Visualization: Bar chart of top 5 configs**
-
-#### Best Configuration
-- **Factors:** 100 (hoặc best value)
-- **Regularization:** 0.01
-- **Iterations:** 30
-- **Rationale:** highest NDCG@10 with reasonable training time
-
-#### Performance Comparison with Baseline
-
-**Table:**
-| Model | P@10 | R@10 | NDCG@10 |
-|-------|------|------|---------|
-| Popularity | 0.XXX | 0.XXX | 0.XXX |
-| ALS (best) | 0.XXX | 0.XXX | 0.XXX |
-| **Improvement** | +X% | +X% | +X% |
-
-**Visualization: Side-by-side bar chart**
-
-#### Metrics vs K Analysis
-
-**Line Chart:** Precision@K, Recall@K, NDCG@K for K=[5,10,20]
-
-**Observations:**
-- Recall increases with K (expected)
-- Precision decreases with K (expected)
-- NDCG shows diminishing returns after K=X
-
-### 5.4 Content-based Results (2 trang)
-
-**Người chịu trách nhiệm:** Người 2
-
-#### Performance Metrics
-
-**Results Table:**
-| Metric | K=5 | K=10 | K=20 |
-|--------|-----|------|------|
-| Precision@K | 0.XXX | 0.XXX | 0.XXX |
-| Recall@K | 0.XXX | 0.XXX | 0.XXX |
-| NDCG@K | 0.XXX | 0.XXX | 0.XXX |
-
-#### Feature Importance Analysis
-- Most discriminative genres
-- Genre co-occurrence patterns
+### 5.5 Kết quả theo mức độ hoạt động của user (1 trang)
+**Người 1**
+- 3 nhóm theo số tương tác train: 5–30 / 31–100 / >100 (`coldstart-user-buckets.csv`)
+- **Phát hiện:** mô hình CB **cải thiện theo độ dài lịch sử** (CB-2: 0,0793 → 0,0799 → 0,1418)
+  chứ không giảm — ngược với trực giác "content-based chỉ tốt cho user mới"
 
 ---
 
-## Chapter 6: Comparison & Analysis (4 trang)
+## Chapter 6: Phân tích chống rò rỉ & tranh luận (6 trang)
 
-**Người chịu trách nhiệm:** Người 2 (lead), Người 1 (collaborate)
+**Người phụ trách:** Người 2 (lead) + Người 1
 
-### 6.1 Quantitative Comparison (2 trang)
+> **Chương này là điểm khác biệt của đồ án** — nơi biến "con số" thành "kết luận đáng tin".
 
-#### Overall Performance Table
-| Model | P@5 | P@10 | P@20 | R@5 | R@10 | R@20 | NDCG@10 |
-|-------|-----|------|------|-----|------|------|---------|
-| Popularity | X | X | X | X | X | X | X |
-| ALS (CF) | X | X | X | X | X | X | X |
-| Content-based | X | X | X | X | X | X | X |
+### 6.1 Rủi ro metadata hậu kỳ (1,5 trang)
+- `genome-scores.csv` không có timestamp — GroupLens tính ngoài dõi
+- Tag bắt đầu từ **2005-12-24**; trung vị ngày kết thúc huấn luyện của user tập phát triển
+  là **2006-09-25** → phần lớn user tập phát triển **train trước khi tag tồn tại**
+- **Confound đo được:** Pearson(số tag của phim, độ phổ biến) = **0,768**
+  (Spearman 0,700) → tag và popularity **không độc lập**
 
-**Visualization: Grouped bar chart for all metrics**
+### 6.2 Bảng phân tầng 3 kỷ nguyên (2 trang)
+`tag-leakage-strata.csv` — chia user theo thời kỳ rating:
 
-#### Statistical Significance Tests
-- Paired t-test between ALS vs Baseline
-- Paired t-test between ALS vs Content-based
-- P-values và significance levels
+| Mô hình | < 2006 | 2006–2012 | ≥ 2012 |
+|---|---:|---:|---:|
+| CB-2 BM25 | **0,0824** | **0,1263** | **0,1094** |
+| CB-1 TF-IDF (tag) | 0,0707 | 0,1256 | 0,1083 |
+| CB-3 Tag Genome | 0,0516 | 0,0836 | 0,0920 |
+| ALS | 0,1283 | 0,1507 | 0,1430 |
+| Item-CF (RS) | 0,1299 | 0,1379 | 0,1229 |
+| BPR (RS) | 0,1038 | 0,1186 | 0,1137 |
+| MostPop | 0,0640 | 0,1046 | 0,0708 |
+| **Chỉ genres (không rò rỉ)** | 0,0026 | 0,0041 | 0,0060 |
 
-#### Analysis by User Activity Level
-- Split users: Low activity (<20 ratings), Medium (20-50), High (>50)
-- Performance comparison per segment
+**Kết luận:** thứ hạng **không đảo chiều** ở bất kỳ tầng nào — **CB-2 ≥ CB-1 > CB-3**
+ở cả ba tầng. Riêng "chỉ genres" (không rò rỉ) đạt 0,0026–0,0060 ở mọi tầng, tức phần
+lớn lợi thế của tag là do **tính chất nội dung**, không phải do rò rỉ thời gian.
+CF không bị CB vượt ở tầng nào.
 
-**Table:**
-| Model | Low Activity | Medium | High |
-|-------|--------------|--------|------|
-| Popularity | X | X | X |
-| ALS | X | X | X |
-| Content | X | X | X |
+> **Lưu ý bắt buộc khi viết:** thứ hạng là **CB-2 ≥ CB-1 > CB-3**, không phải
+> "CB-1 > CB-2 > CB-3". Chênh lệch rất nhỏ ở tầng 2006–2012 (0,1263 vs 0,1256) nhưng
+> BM25 dẫn ở cả ba tầng.
 
-**Finding:** CF performs better on high-activity users, Content better on low-activity
+### 6.3 Ảnh hưởng của chế độ trọng số hồ sơ (1 trang)
+`weight-mode-buckets.csv` + `weight-mode-paired-tests.csv`:
+- `centered` **tệ hơn hẳn** `binary_pos` ở cả 3 nhóm (chênh −0,023 / −0,020 / −0,031;
+  p < 1e-44)
+- `rating` gần như tương đương `binary_pos` (p = 0,04 / 3,5e-06 / 1,0e-06)
+- **Diễn giải:** tín hiệu quan trọng là **có tương tác hay không**, không phải **mức độ hài lòng**
 
-### 6.2 Qualitative Analysis (2 trang)
+### 6.4 Metric ngoài độ chính xác (1,5 trang)
+`beyond-accuracy-full.csv`:
 
-#### Case Studies (5 users)
+| Mô hình | Coverage@10 | Gini@10 | Novelty@10 | ILD@10 |
+|---|---:|---:|---:|---:|
+| ALS | 14,94% | 0,9732 | 3,6150 | 0,7333 |
+| Item-CF (RS) | 29,92% | 0,9832 | 3,1504 | 0,6640 |
+| CB-3 Tag Genome | 67,20% | 0,9407 | 5,5252 | 0,5208 |
+| CB-2 BM25 | 49,48% | 0,9855 | 3,2252 | 0,6314 |
+| CB-4 Hybrid | 48,89% | 0,9802 | 3,5064 | 0,5842 |
+| MostPop | 2,06% | 0,9985 | 1,9550 | 0,5784 |
 
-**User 1:** High activity, diverse tastes
-- History: [Movie titles]
-- CF recommendations: [Titles with explanations]
-- Content recommendations: [Titles with explanations]
-- **Analysis:** CF captures collaborative patterns, Content focuses on genre similarity
+**Phát hiện trung tâm:** **coverage đảo ngược với độ chính xác** — ALS chính xác nhất
+nhưng chỉ chạm 14,9% catalog; CB-3 kém nhất trong CB nhưng chạm 67,2%. Gini đi cùng
+hướng ngược: CF dồn suất vào ít phim hơn.
 
-**User 2:** Low activity, specific genre preference
-- Similar structure
+**Hình:** `results-beyond-accuracy.png`, `results-accuracy-vs-novelty.png`
 
-**Users 3-5:** Diverse profiles
-
-#### Beyond-Accuracy Metrics
-
-**Coverage:**
-- % of items recommended at least once
-- CF coverage vs Content coverage
-
-**Diversity:**
-- Intra-list diversity (avg pairwise distance)
-- CF tends to recommend popular items (filter bubble)
-- Content provides more diverse genres
-
-**Novelty:**
-- Avg popularity rank of recommendations
-- CF: more popular items
-- Content: more niche items
-
-**Table:**
-| Model | Coverage (%) | Diversity | Avg Novelty Rank |
-|-------|--------------|-----------|-------------------|
-| Popularity | X | X | X |
-| ALS | X | X | X |
-| Content | X | X | X |
-
-#### When Each Method Performs Better
-
-**CF (ALS) excels when:**
-- User has rich interaction history
-- Collaborative patterns exist
-- Items have sufficient interaction data
-
-**Content-based excels when:**
-- New items (cold-start)
-- New users with few ratings
-- Strong genre preferences
+### 6.5 Khi nào phương pháp nào thắng (1 trang)
+| Điều kiện | Thắng | Bằng chứng |
+|---|---|---|
+| Giao thức thường, lịch sử dày | **CF** (ALS 0,1375) | Chương 5.1 |
+| Phim mới, chưa có tương tác | **CB** (0,0347 vs 0,0000) | Chương 5.3 |
+| User lịch sử ngắn (5–30) | CB vẫn cạnh tranh được | Chương 5.5 |
+| Muốn độ phủ rộng, tránh dồn suất | **CB** (coverage 49–67%) | Chương 6.4 |
+| Muốn giải thích được | **CB** (tương đồng nội dung) | Chương 4.3 |
 
 ---
 
-## Chapter 7: Discussion (3 trang)
+## Chapter 7: Discussion (4 trang)
 
-**Người chịu trách nhiệm:** Người 1 + Người 2 collaborate
+**Người phụ trách:** Người 1 + Người 2
 
-### 7.1 Key Findings
+### 7.1 Tổng hợp phát hiện
+1. CF thắng ở giao thức thường — và kết luận này **đã cân bằng** về độ bao phủ sweep
+2. CB thắng áp đảo ở cold-start item — đây là điều kiện cụ thể, không phải "CF kém"
+3. Coverage đảo ngược với độ chính xác
+4. Tín hiệu content không bị rò rỉ thời gian (bảng phân tầng kỷ nguyên)
 
-- ALS outperforms baseline by X% on NDCG@10
-- CF better for experienced users, Content better for cold-start
-- Sparsity remains challenge for CF
-- Content-based provides better diversity
+### 7.2 Đánh đổi CF ↔ Content-based
+| | CF | Content-based |
+|---|---|---|
+| **Thế mạnh** | Khám phá mẫu hợp tác ẩn; không cần đặc trưng phim | Không cần tương tác; giải thích được; phủ rộng; sống được với phim mới |
+| **Điểm yếu** | Cold-start item = 0; dồn suất (coverage 14,9%); không giải thích | Giới hạn bởi chất lượng đặc trưng; over-specialization; thiếu serendipity |
+| **Vị trí trong đồ án** | 0,1375 | 0,1054 → 0,0347 (cold-start) |
 
-### 7.2 CF vs Content-based Trade-offs
+### 7.3 Bài học về thiết kế protocol
+- **Split per-user vs global:** 4.587 → 158.774 user đánh giá (×34,6)
+- **Bằng chứng protocol trên từng dòng:** `split_id` + `catalog_id` — biến "cùng giao thức"
+  từ lời tuyên bố thành thứ kiểm chứng được
+- **Tái lập được > nhanh:** BPR `num_threads=1` đánh đổi 40s để số tuyệt đối ổn định
+- **Bẫy popularity prior:** tốt ở giao thức thường, chết ở cold-start — cần đánh giá
+  trên **cả hai** giao thức trước khi chọn
 
-#### Collaborative Filtering Strengths:
-- Discovers latent patterns
-- No need item features
-- Effective for popular items
+### 7.4 Giới hạn
+- **Metadata hậu kỳ** (đã đo ở Chương 6, nhưng số tuyệt đối vẫn lạc quan hơn production)
+- **Cold-start là mô phỏng**: 10% phim giữ lại theo 5 nhóm năm phát hành, mọi user vẫn
+  có lịch sử train — không phải phim mới thật
+- **Chỉ offline:** không A/B test, không đo tác động thực tế
+- **Giao thức LOO chưa chạy:** lựa chọn full ranking chỉ dựa trên trích dẫn, chưa có
+  bằng chứng Kendall τ đo trong repo
+- **Chỉ 9 mô hình, không deep learning**
 
-#### CF Weaknesses:
-- Cold-start problem (new users/items)
-- Sparsity challenges
-- Popularity bias
-
-#### Content-based Strengths:
-- No cold-start for new items
-- Explainable recommendations
-- Better diversity
-
-#### Content Weaknesses:
-- Limited by feature quality
-- Over-specialization (filter bubble)
-- No serendipity
-
-### 7.3 Cold-start Problem Analysis
-
-#### New User Scenario
-- CF: cannot recommend (no history)
-- Content: can use demographics (not implemented)
-- Baseline: use popularity
-
-#### New Item Scenario
-- CF: cannot recommend (no interactions)
-- Content: can recommend immediately (based on features)
-
-### 7.4 Limitations
-
-- Dataset: MovieLens may not fully represent ecommerce
-- Methods: didn't implement hybrid or deep learning
-- Evaluation: only offline metrics (no A/B testing)
-- Features: only genres used (no text, images)
-
-### 7.5 Practical Implications
-
-- Use CF for main users
-- Use Content for cold-start
-- Combine both in production (hybrid)
-- Monitor diversity và fairness
+### 7.5 Hàm ý thực tiễn
+- Hệ thống thật nên **kết hợp**: CF cho lịch sử dày, CB cho phim mới
+- Nếu chỉ chọn một: CF cho catalog ổn định, CB nếu luồng phim mới đến liên tục
+- **Luôn đánh giá trên ≥ 2 giao thức** (thường + cold-start) trước khi chọn mô hình
 
 ---
 
 ## Chapter 8: Conclusion & Future Work (2 trang)
 
-**Người chịu trách nhiệm:** Người Phụ B
+**Người phụ trách:** Người Phụ B
 
-### 8.1 Summary of Contributions
+### 8.1 Đóng góp
+1. Hợp nhất 9 mô hình trên một giao thức, có bằng chứng protocol từng dòng
+2. Cân bằng sweep 51 CF / 93 CB → kết luận "CF thắng" có cơ sở
+3. Kết luận cold-start đảo chiều, có Wilcoxon
+4. Đo trực tiếp rủi ro rò rỉ metadata hậu kỳ bằng phân tầng 3 kỷ nguyên
+5. Bằng chứng sweep commit trong repo (`ablation-*.csv`) — kiểm chứng được
 
-- Implemented và compared CF (ALS) vs Content-based on MovieLens 1M
-- Comprehensive evaluation with ranking metrics
-- Analysis of trade-offs and use cases
-- Insights on cold-start problem
-
-### 8.2 Future Directions
-
-#### Hybrid Approaches
-- Weighted combination of CF + Content
-- Switching hybrid based on data availability
-- LightFM (hybrid matrix factorization)
-
-#### Deep Learning Methods
-- Neural Collaborative Filtering (NCF)
-- Autoencoders for recommendation
-- Transformer-based models (BERT4Rec)
-
-#### Scalability Improvements
-- Approximate Nearest Neighbors (ANN)
-- FAISS for large-scale retrieval
-- Distributed training (Spark MLlib)
-
-#### Additional Features
-- Text descriptions (BERT embeddings)
-- Images (CNN features)
-- Temporal dynamics (session-based)
-
-#### Production Considerations
-- Real-time recommendation serving
-- A/B testing framework
-- Monitoring và feedback loops
+### 8.2 Hướng phát triển
+| Hướng | Chi phí | Ghi chú |
+|---|---|---|
+| **Chạy sampled LOO → Kendall τ** | ~20 phút | Biến lựa chọn full ranking từ trích dẫn thành **kết quả thực nghiệm** — ưu tiên cao nhất |
+| Hybrid CF+CB ở tầng fusion | Trung bình | Nối 2 kết quả trái chiều của đồ án |
+| Biến thể giới hạn số tag/phim của CB-1 | 1 run | Cắt tương quan với popularity (Pearson 0,768) |
+| Bảng Wilcoxon so chéo CF↔CB | Thấp | Cần bảng riêng — câu hỏi khác bảng trong bảng |
+| Đo trực tiếp năng lực xếp hạng ngoài top-10 | Trung bình | NDCG@50 đã có, nhưng phân tích sâu hơn |
+| Deep learning (NCF, BERT4Rec) | Cao | Ngoài phạm vi đồ án |
 
 ---
 
-## References (1-2 trang)
+## References (1,5 trang)
 
-**Người chịu trách nhiệm:** Người Phụ A
+**Người phụ trách:** Người Phụ A — **IEEE hoặc ACM style**
 
-**Format:** IEEE or ACM style
+**Bắt buộc có:**
+1. Hu, Y., Koren, Y., & Volinsky, C. (2008). Collaborative filtering for implicit feedback datasets. *ICDM*, 263–272.
+2. Koren, Y., Bell, R., & Volinsky, C. (2009). Matrix factorization techniques for recommender systems. *Computer*, 42(8), 30–37.
+3. Rendle, S., Freudenthaler, C., Gantner, Z., & Schmidt, L. (2009). BPR: Bayesian personalized ranking from implicit feedback. *UAI*.
+4. Harper, F. M., & Konstan, J. A. (2015). The MovieLens datasets: history and context. *ACM TiiS*, 5(4), 1–19.
+5. Järvelin, K., & Kekäläinen, J. (2002). Cumulated gain-based evaluation of IR techniques. *ACM TOIS*, 20(4), 422–446.
+6. Robertson, S., & Zaragoza, H. (2009). The probabilistic relevance framework: BM25 and beyond. *FnTIR*, 3(4), 333–389.
+7. Krichene, W., & Rendle, S. (2020). On sampled metrics for item recommendation. *KDD*.
+8. GroupLens. *MovieLens 25M* + Tag Genome — https://grouplens.org/datasets/movielens/25m/
 
-**Key Papers:**
-
-1. Hu, Y., Koren, Y., & Volinsky, C. (2008). Collaborative filtering for implicit feedback datasets. *2008 Eighth IEEE International Conference on Data Mining*, 263-272.
-
-2. Koren, Y., Bell, R., & Volinsky, C. (2009). Matrix factorization techniques for recommender systems. *Computer*, 42(8), 30-37.
-
-3. Ricci, F., Rokach, L., & Shapira, B. (2015). *Recommender Systems Handbook*. Springer.
-
-4. Harper, F. M., & Konstan, J. A. (2015). The MovieLens datasets: History and context. *ACM Transactions on Interactive Intelligent Systems*, 5(4), 1-19.
-
-**Online Resources:**
-
-5. Implicit library documentation: https://github.com/benfred/implicit
-
-6. Scikit-learn documentation
+**Bổ sung:** Ricci et al. (2015) *Recommender Systems Handbook*; Shani & Gunawardana (2011) *Evaluating Recommendation Systems*; Herlocker et al. (2004) metrics đánh giá; McFee et al. (2020) *metrics*; Chen et al. (2016) *LightGBM* (nếu nhắc).
 
 ---
 
-## Appendix (1 trang)
+## Appendix (2 trang)
 
-**Người chịu trách nhiệm:** Người Phụ C
+**Người phụ trách:** Người Phụ C
 
-### A. Hyperparameter Grid Search Results (Full Table)
-
-Complete table với tất cả 18 configurations
-
-### B. Additional Visualizations
-
-- Full sparsity heatmap
-- User/item distribution plots
-- Genre co-occurrence matrix
-
-### C. Code Repository
-
-- Link to GitHub/GitLab
-- File structure overview
-- Usage instructions
+- **A.** Bảng sweep đầy đủ — `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (144 dòng)
+- **B.** Bảng bootstrap CI và Wilcoxon đầy đủ
+- **C.** Hình EDA bổ sung (long-tail, genome)
+- **D.** Quy trình tái lập: `docs/codebase-summary.md` (môi trường, lệnh, cấu trúc repo)
+- **E.** Bảng thống kê dataset đầy đủ — `dataset-summary.csv`
 
 ---
 
-## Phân Công Chi Tiết
+## Phân công chi tiết
 
-| Người | Chapters | Trang | Nội dung chính |
-|-------|----------|-------|----------------|
-| **Người 1** | 2.2, 3, 4.1-4.3, 5.2-5.3, phần của 6-7 | ~20 | CF theory, Dataset, EDA, ALS implementation, CF results |
-| **Người 2** | 2.3-2.4, 4.4, 5.1, 5.4, 6 (lead), phần của 7 | ~18 | Content-based theory, implementation, evaluation metrics, comparison |
-| **Người Phụ A** | 1, 2.1, References | ~5 | Introduction, RecSys overview, References |
-| **Người Phụ B** | 8 | ~2 | Conclusion & Future work |
-| **Người Phụ C** | Abstract, Appendix | ~2 | Abstract, Appendix |
+| Người | Chương | Trang | Nội dung chính |
+|---|---|---:|---|
+| **Người 1** | 2.2, 3, 4.1, 4.2, 4.4, 5.2, 5.5, 6.3, 7 | ~19 | CF theory, dataset + EDA, ALS/Item-CF/BPR, cân bằng sweep, phân tầng theo user |
+| **Người 2** | 2.3–2.4, 4.3, 4.5, 5.1, 5.3, 5.4, 6, 7 | ~18 | CB theory, metric, late fusion, bảng chính, cold-start, chống rò rỉ (lead Chương 6) |
+| **Người Phụ A** | 1, 2.1, References | ~5 | Introduction, tổng quan RecSys, references |
+| **Người Phụ B** | 8 | ~2 | Conclusion & future work |
+| **Người Phụ C** | Abstract, Appendix | ~3 | Abstract, phụ lục |
 
-**Tổng:** 35-40 trang
+**Tổng:** 40–45 trang
 
 ---
 
 ## Timeline
 
 | Tuần | Người 1 | Người 2 | Deliverable |
-|------|---------|---------|-------------|
-| 1 | Data + EDA + preprocessing | Research content-based methods | Train/test split, EDA notebook |
-| 2 | Baseline + ALS implementation | Content-based implementation | Models working |
-| 3 | CF evaluation + tuning | Implement metrics + evaluate both | Results tables |
-| 4 | Write chapters 2.2, 3, 4.1-4.3, 5.2-5.3 | Write chapters 2.3-2.4, 4.4, 5.1, 5.4, 6 | Draft report |
+|---|---|---|---|
+| 1 | Chương 3 (dataset + EDA) | Chương 2.3–2.4 (CB theory + metric) | Xong Chương 2–3 |
+| 2 | Chương 4.1, 4.2, 4.4 | Chương 4.3, 4.5 | Xong Chương 4 |
+| 3 | Chương 5.2, 5.5 | Chương 5.1, 5.3, 5.4 | Xong Chương 5 + bảng |
+| 4 | Chương 6.3, 7 | Chương 6.1, 6.2, 6.4, 6.5 | Xong Chương 6–7 |
+| 5 | Người Phụ A/B/C viết phần được giao | Review chéo toàn bộ | Bản nháp đầy đủ |
+| 6 | Sửa theo góp ý + đối chiếu số liệu với `results/final/` | Sửa theo góp ý | Bản cuối |
 
-**Post Tuần 4:**
-- Người Phụ A, B, C: write assigned chapters
-- Tất cả: review và finalize
+---
+
+## Checklist trước khi nộp
+
+- [ ] Mọi số liệu trong báo cáo **đối chiếu được** với `results/final/*.csv` — không chép tay
+- [ ] Thứ hạng CB viết là **CB-2 ≥ CB-1 > CB-3** (không phải "CB-1 > CB-2")
+- [ ] Số config sweep viết là **CF 51 / CB 93**
+- [ ] Nêu rõ metadata hậu kỳ (Chương 6.1)
+- [ ] Nêu rõ `pop_prior` giết cold-start (Chương 4.3)
+- [ ] Nêu rõ BPR `num_threads=1` và lý do (Chương 2.2.5)
+- [ ] Phân biệt "0,0000 = đúng bằng không" với "thấp" ở bảng cold-start (Chương 5.3)
+- [ ] Mọi bảng trong báo cáo mang `split_id` + `catalog_id` khi trích dẫn từ repo
+- [ ] Chương 6 nêu rõ **giới hạn** của chính kết luận chống rò rỉ
+- [ ] Ghi rõ giao thức LOO **chưa chạy** (Chương 7.4)

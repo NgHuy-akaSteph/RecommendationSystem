@@ -231,3 +231,34 @@ def test_ablation_tables_have_protocol_evidence(group):
     # Mỗi config chỉ xuất hiện đúng một lần — trùng là ghép nhầm bản kết quả
     assert df["exp_name"].is_unique, \
         f"{path.name}: có exp_name trùng: {df['exp_name'][df['exp_name'].duplicated()].tolist()}"
+
+
+@pytest.mark.parametrize("group, prefixes", [
+    ("cf", ("cf-", "rs-")), ("cb1", ("cb1-",)), ("cb2", ("cb2-",)),
+    ("cb3", ("cb3-",)), ("cb4", ("cb4-",)),
+])
+def test_ablation_covers_every_config_of_its_group(group, prefixes):
+    """Bảng ablation phải phủ **đúng** mọi config thuộc nhóm — không thiếu, không thừa.
+
+    Đã xảy ra thật: bảng CF trước đây chỉ lấy tiền tố `cf-` (18 dòng) trong khi
+    sweep CF gồm cả họ `rs-*` (Item-CF, BPR) — 51 config. Tài liệu tuyên bố "CF đã
+    quét 51 config" nhưng bằng chứng commit chỉ có 18 dòng: tuyên bố không kiểm
+    chứng được từ repo.
+    """
+    path = paths.FINAL_DIR / f"ablation-{group}.csv"
+    if not path.exists():
+        pytest.skip(f"{path.name} chưa được sinh — chạy collect_results_to_table --ablation")
+    df = pd.read_csv(path)
+
+    in_configs = {p.stem for p in paths.CONFIG_DIR.glob("*.yaml")
+                  if p.stem.startswith(prefixes)}
+    in_table = set(df["exp_name"])
+
+    missing = sorted(in_configs - in_table)
+    assert not missing, \
+        f"{path.name}: thiếu {len(missing)} config đã sweep: {missing[:5]}"
+
+    # Config thừa trong bảng là kết quả mồ côi — config không còn trong configs/
+    extra = sorted(in_table - in_configs)
+    assert not extra, \
+        f"{path.name}: có {len(extra)} config không còn trong configs/: {extra[:5]}"
