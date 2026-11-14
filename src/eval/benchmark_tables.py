@@ -9,7 +9,7 @@ Bảng CF và bảng CB là **hai bảng riêng** chứ không phải một bả
 trả lời hai câu hỏi khác nhau. Wilcoxon chỉ chạy **trong từng bảng**: đối chiếu CF với CB
 là câu hỏi khác và cần bảng riêng.
 
-Sau khi quét đủ, số config đã chạy là **CF 51 / CB 85** (đếm từ `results/*_metrics.csv`),
+Sau khi quét đủ, số config đã chạy là **CF 51 / CB 93** (đếm từ `results/*_metrics.csv`),
 nên kết luận "CF thắng CB" giờ đã **cân bằng về độ bao phủ sweep** chứ không còn là so
 sánh thiên lệch.
 
@@ -228,7 +228,7 @@ def main() -> None:
         print(f"→ {path}")
 
     # Wilcoxon ghép cặp **trong từng bảng**: đối chiếu CF với CB là câu hỏi khác và
-    # cần bảng riêng, vì số config đã quét hai bên lệch nhau (CF 49, CB 8).
+    # cần bảng riêng, vì số config đã quét hai bên lệch nhau (CF 51, CB 93).
     spec_groups = {"cf": CF_SPECS, "cb": CB_SPECS}
     if args.protocol == "coldstart":
         spec_groups = {"coldstart": ALL_SPECS}

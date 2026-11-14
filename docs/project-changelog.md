@@ -5,6 +5,46 @@ thay đổi và cách kiểm chứng.
 
 ---
 
+## 2026-11-14 — Sửa sai lệch số liệu trước khi viết báo cáo
+
+**Phạm vi:** Audit toàn repo trước khi viết báo cáo. Tìm và sửa **6 sai lệch** giữa mô tả
+trong tài liệu và bằng chứng trong `results/`. Không đổi thuật toán, không đổi số liệu đã
+công bố.
+
+### Vấn đề phát hiện và cách sửa
+
+| # | Vấn đề | Sửa |
+|---|---|---|
+| 1 | `README.md` + changelog ghi thứ hạng "CB-1 > CB-2 > CB-3" ở bảng phân tầng kỷ nguyên — **ngược lại** với `results/final/tag-leakage-strata.csv` (CB-2 dẫn ở cả 3 tầng) | Sửa thành "CB-2 ≥ CB-1 > CB-3", bổ sung số ở cả 3 tầng để người đọc tự kiểm |
+| 2 | Số config sweep ghi "CB 85" — thực tế **93** (sweep mở rộng thêm 8 config CB sau đó) | Sửa 85 → 93 ở README, `benchmark_tables.py`, `build_final_tables.py`, phase-03 docs; changelog giữ 85 kèm đính chính để làm lịch sử |
+| 3 | `results/ablation-*.csv` (111 dòng bằng chứng sweep) bị gitignore → luận điểm "đã cân bằng sweep" **không kiểm chứng được** từ repo | Copy 5 bảng vào `results/final/` để commit |
+| 4 | 38 file `*_metrics.csv` thiếu cột `split_id`/`catalog_id` (chạy trước khi thêm cột) → `dev-summary.csv` mất bằng chứng protocol ở dòng CB-4 | Chạy lại 7 config có trong bảng ablation, sinh lại bảng |
+| 5 | Thiếu `docs/codebase-summary.md`, `docs/system-architecture.md`, `docs/development-roadmap.md` (chuẩn dự án) | Viết mới 3 file |
+| 6 | `scripts/run_shared_benchmark.py` thiếu `best-cb4-hybrid-content.yaml` trong `CONFIGS` → chạy lại sẽ fail `benchmark-cb.csv` | Thêm config + test chặn tách lệch runner/bảng |
+
+### Test chặn hồi quy mới
+
+| Test | Chặn cái gì |
+|---|---|
+| `test_docs_state_real_sweep_counts` | Đối chiếu số config trong tài liệu với `configs/` thật (không hard-code) |
+| `test_final_tables_have_protocol_evidence` | Mọi dòng trong `results/final/*-summary.csv` + `benchmark-*.csv` phải có `split_id`/`catalog_id` khác rỗng |
+| `test_ablation_tables_have_protocol_evidence` | Mọi dòng trong `results/final/ablation-*.csv` phải có bằng chứng protocol, không trùng `exp_name` |
+| `test_shared_benchmark_covers_all_table_specs` | `CONFIGS` của runner phải ⊇ mọi config trong `CF_SPECS + CB_SPECS` |
+| `test_docs_do_not_claim_cb1_above_cb2` | Cấm tuyên bố thứ hạng CB sai trong README/changelog |
+
+### Kiểm chứng
+
+| Hạng mục | Kết quả |
+|---|---|
+| `pytest tests/` | **234 passed** (219 cũ + 15 test mới), 0 failed |
+| Chạy lại 7 config thiếu `split_id` | NDCG@10 **không đổi 1 chữ số** (diff = 0.00e+00 cho cả 7) |
+| `benchmark_tables --protocol full` | `benchmark-cf.csv` / `benchmark-cb.csv` / `benchmark-coldstart.csv` **không đổi byte** (md5 khớp) |
+| `build_final_tables.py` | Chỉ `dev-summary.csv` thay đổi (vá cột bằng chứng); 26 bảng còn lại giữ nguyên |
+| `git add -An --dry-run results/` | 22 bảng final đã track + 5 bảng ablation mới + `dev-summary.csv` sửa |
+| Bảng ablation | 111 dòng, **100% có `split_id` + `catalog_id`** |
+
+---
+
 ## 2026-11-14 — Dọn artifact repo: `.gitignore` viết lại + xoá dữ liệu protocol cũ
 
 **Phạm vi:** Dọn file rác. **Không** đụng thuật toán, **không** đụng số liệu.
@@ -140,6 +180,11 @@ thì phải quét đủ CB.
 |---|---|---|---|
 | CF (ALS + Item-CF + BPR) | 51 | 49 chạy | **51 chạy** (thêm `cf-itemknn-k050`, `cf-itemknn-k100`) |
 | CB (CB-1…CB-4) | 85 | 8 chạy | **85 chạy** |
+
+> **Đính chính (2026-11-14, sau audit báo cáo):** con số 85 là của **thời điểm sweep**.
+> Sweep đã được mở rộng thêm 8 config CB (CB-4 late-fusion, CB-3 SVD/biến thể) nên
+> hiện tại là **CF 51 / CB 93** — 93/93 đều đã chạy. Con số 85 ở đây giữ nguyên để
+> làm lịch sử; xem entry "Sửa sai lệch số liệu trước khi viết báo cáo" ở đầu file.
 
 Chạy 85 config CB mất ~50 phút (tuần tự, mỗi config fit + score 20.000 user + tính
 16 metric), **0 lỗi**. Phân bố thời gian trên `dev`:
@@ -595,7 +640,7 @@ train nào nên mô hình lọc cộng tác không có gì để học. Đây l�
 | MostPop | 0,0640 | 0,1046 | 0,0708 |
 | Chỉ genres (không leak) | 0,0026 | 0,0041 | 0,0060 |
 
-Thứ hạng CB-1 > CB-2 > CB-3 giữ nguyên ở cả ba tầng; CF không bao giờ bị CB vượt ở tầng
+Thứ hạng CB-2 ≥ CB-1 > CB-3 giữ nguyên ở cả ba tầng; CF không bao giờ bị CB vượt ở tầng
 nào. CB-1 dẫn CB-3 **1,18x–1,50x** ở mọi tầng — phần lớn lợi thế của tag là do tính chất
 nội dung chứ không phải do rò rỉ thời gian.
 

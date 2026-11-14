@@ -29,7 +29,7 @@ venv/bin/python -m pytest tests/
 | Đường dẫn | Trong git? | Ghi chú |
 |---|---|---|
 | `src/`, `tests/`, `scripts/`, `configs/`, `docs/` | ✅ Có | mã nguồn và 159 config YAML |
-| `results/final/*.csv` (22 bảng) | ✅ Có | **bảng báo cáo cuối** — người clone repo xem được ngay |
+| `results/final/*.csv` (27 bảng) | ✅ Có | **bảng báo cáo cuối** — người clone repo xem được ngay |
 | `results/figures/*.png` (9 hình) | ✅ Có | hình cho chương kết quả |
 | `results/*_topk.npy`, `results/*_peruser.npz`, `results/*_metrics.csv` | ❌ Không | artifact sinh tự động, **~500 MB**; gitignore |
 | `data/` (raw + cache) | ❌ Không | sinh lại bằng 3 bước tiền xử lý ở trên |
@@ -162,7 +162,7 @@ split, catalog và tập user (kiểm chứng bằng cột `split_id` / `catalog
 Ba kết luận chính của bảng chung:
 
 1. **CF thắng CB ở giao thức thường** — ALS 0,1375 > CB-4 Hybrid 0,1054. Đây là kết luận
-   **đã cân bằng**: cả hai nhóm đều đã quét **đủ** sweep (CF 51 config, CB 85 config —
+   **đã cân bằng**: cả hai nhóm đều đã quét **đủ** sweep (CF 51 config, CB 93 config —
    xem [Cân bằng sweep — CF vs CB](#cân-bằng-sweep--cf-vs-cb)), nên chênh lệch 0,1375 vs
    0,1054 không còn là hệ quả của việc một bên được tinh chỉnh nhiều hơn bên kia.
 2. **CB thắng áp đảo ở cold-start item** — cả 4 mô hình content đạt NDCG@10 ≈ 0,03
@@ -181,7 +181,11 @@ Cả hai nhóm đã được quét **đủ** trong repo này, nên so sánh khô
 | Nhóm | Config sweep trong `configs/` | **Đã chạy ở repo này** | Chưa chạy |
 |---|---|---|---|
 | CF (ALS + Item-CF + BPR) | 51 | **51** | 0 |
-| CB (CB-1…CB-4) | 85 | **85** | 0 |
+| CB (CB-1…CB-4) | 93 | **93** | 0 |
+
+Bằng chứng từng config nằm ở `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (111 dòng,
+mỗi dòng mang `params` + `split_id`/`catalog_id`) — người đọc repo kiểm chứng được "đã quét
+đủ" mà không phải tin lời.
 
 Sau khi sweep đủ, **kết luận đổi chiều so với bản trước**: CB không chỉ "thua sát" mà
 thua rõ ở giao thức thường — 0,1054 (CB-4 Hybrid) so với 0,1375 (ALS), chênh **23%**.
@@ -220,11 +224,19 @@ nhưng rất nhạy với `α` và `factors`**. Cấu hình thắng vẫn là `f
 
 ## Tài liệu
 
+**Tài liệu chính (theo repo):**
+
+- [`docs/codebase-summary.md`](docs/codebase-summary.md): cấu trúc repo, module nào làm gì, một đường chạy duy nhất, bảng 9 mô hình.
+- [`docs/system-architecture.md`](docs/system-architecture.md): luồng dữ liệu, hợp đồng `BaseRecommender`, hàng rào chống leakage.
+- [`docs/development-roadmap.md`](docs/development-roadmap.md): trạng thái phase, kết quả đạt được, việc còn lại.
+- [`docs/data-processing-comparison-across-projects.md`](docs/data-processing-comparison-across-projects.md): so sánh xử lý dữ liệu RS vs `recommendation-cb` + trạng thái sau hợp nhất.
+- [`docs/project-changelog.md`](docs/project-changelog.md): nhật ký thay đổi dự án.
+
+**Ghi chú nội bộ (`notes/`, không track trong git):**
+
 - `notes/person1-implementation-guide.md`: pipeline Collaborative Filtering chính với baseline và ALS trên MovieLens 25M.
 - `notes/person2-content-based-guide.md`: hướng dẫn Content-based Filtering.
 - `notes/advanced-cf-bpr-svd-svdpp-ml1m-guide.md`: thực nghiệm độc lập với MovieLens 1M, giải thích và hướng dẫn chạy BPR, SVD và SVD++; gồm protocol đánh giá đúng cho explicit rating và Top-N ranking.
-- `docs/data-processing-comparison-across-projects.md`: so sánh xử lý dữ liệu RS vs `recommendation-cb`.
-- `docs/project-changelog.md`: nhật ký thay đổi dự án.
 
 Mỗi hướng dẫn nêu rõ dataset, môi trường, cách chạy, cách đánh giá và các giới hạt cần trình bày khi bảo vệ. Không commit các dataset MovieLens thô hoặc kết quả chưa tái lập được.
 
@@ -235,8 +247,10 @@ Mỗi hướng dẫn nêu rõ dataset, môi trường, cách chạy, cách đán
   Số tuyệt đối lạc quan hơn môi trường production, nhưng **so sánh giữa các mô hình công
   bằng** vì điều kiện như nhau.
 - **Bảng phân tầng theo kỷ nguyên** (`results/final/tag-leakage-strata.csv`) chứng minh thứ
-  hạng **không đảo chiều** theo thời kỳ user: CB-1 > CB-2 > CB-3 ở cả ba tầng
-  (< 2006 / 2006–2012 / ≥ 2012). Riêng CB-1 vẫn dẫn CB-3 ở mọi tầng (1,18x–1,50x), tức
+  hạng **không đảo chiều** theo thời kỳ user: CB-2 ≥ CB-1 > CB-3 ở cả ba tầng
+  (< 2006 / 2006–2012 / ≥ 2012) — BM25 dẫn hoặc ngang TF-IDF ở mọi tầng (chênh rất nhỏ:
+  0,0824 vs 0,0707 / 0,1263 vs 0,1256 / 0,1094 vs 0,1083), còn Tag Genome luôn kém nhất.
+  Riêng CB-1 vẫn dẫn CB-3 ở mọi tầng (1,37x / 1,50x / 1,18x theo ba tầng), tức
   phần lớn lợi thế của tag là do tính chất nội dung chứ không phải do rò rỉ thời gian.
 - **Cold-start là mô phỏng**, không phải phim mới thật: 10% phim bị giữ lại ngẫu nhiên
   theo 5 nhóm năm phát hành. Mọi user vẫn có lịch sử train.

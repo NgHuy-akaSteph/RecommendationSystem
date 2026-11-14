@@ -155,7 +155,7 @@ def main() -> None:
     # Wilcoxon **trong từng bảng** (CF / CB / cold-start) do `src.eval.benchmark_tables`
     # sinh và ghi thẳng vào results/final/ — vì nó đi kèm cột `split_id`/`catalog_id`.
     # Script này không ghi đè: so chéo CF↔CB là câu hỏi khác và cần bảng riêng, số config
-    # đã quét hai bên lệch nhau (CF 48, CB 8).
+    # đã quét hai bên lệch nhau (CF 51, CB 93).
     print("\nWilcoxon: sinh bởi `python -m src.eval.benchmark_tables --protocol "
           "{full,coldstart}` (không ghi đè ở đây).")
 

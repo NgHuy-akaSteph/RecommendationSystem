@@ -155,3 +155,79 @@ def test_wilcoxon_detects_different_user_sets(fake_results):
                    np.linspace(0, 1, 100), users=np.arange(1, 101, dtype="int32"))
     with pytest.raises(SystemExit, match="khác"):
         wilcoxon_for_table("dev", CF_SPECS, results_dir=fake_results)
+
+
+# ── runner và bảng phải phủ đúng nhau ───────────────────────────────────
+
+def test_shared_benchmark_covers_all_table_specs():
+    """`run_shared_benchmark.CONFIGS` phải phủ hết config của bảng benchmark.
+
+    Lỗi đã xảy ra thật: runner chỉ có 8 config (thiếu `best-cb4-hybrid-content.yaml`)
+    trong khi `CB_SPECS` đã có CB-4 → chạy lại runner sẽ không sinh dòng CB-4 và
+    `benchmark_tables` fail với "Thiếu kết quả".
+    """
+    import sys
+    sys.path.insert(0, str(paths.ROOT / "scripts"))
+    import run_shared_benchmark as runner
+
+    runner_configs = set(runner.CONFIGS)
+    table_configs = {spec.config for spec in ALL_SPECS}
+    missing = table_configs - runner_configs
+    assert not missing, f"runner thiếu config của bảng benchmark: {sorted(missing)}"
+    # Runner không được có config thừa mà bảng không dùng — config thừa chạy tốn thời gian
+    # và tạo kết quả mồ côi.
+    extra = runner_configs - table_configs
+    assert not extra, f"runner có config không dùng trong bảng: {sorted(extra)}"
+
+
+# ── bằng chứng protocol phải có trong mọi bảng báo cáo ──────────────────
+
+@pytest.mark.parametrize("filename", [
+    "benchmark-cf.csv", "benchmark-cb.csv", "benchmark-coldstart.csv",
+    "dev-summary.csv", "full-summary.csv", "coldstart-item.csv",
+])
+def test_final_tables_have_protocol_evidence(filename):
+    """Mọi dòng bảng báo cáo phải mang `split_id`/`catalog_id` khác rỗng.
+
+    Đã xảy ra thật: `dev-summary.csv` thiếu cột này ở dòng CB-4 vì file metrics
+    được sinh trước khi `run_and_save` bắt đầu ghi `split_id`. Bảng `full` và
+    `coldstart` thì có → bảng dev trông như thiếu bằng chứng protocol dù nó có.
+    """
+    path = paths.FINAL_DIR / filename
+    if not path.exists():
+        pytest.skip(f"{filename} chưa được sinh — chạy build_final_tables.py trước")
+    df = pd.read_csv(path)
+    for col in ("split_id", "catalog_id"):
+        assert col in df.columns, f"{filename}: thiếu cột {col}"
+        assert df[col].notna().all(), f"{filename}: có dòng thiếu {col}"
+        assert (df[col].astype(str).str.strip() != "").all(), \
+            f"{filename}: có dòng {col} rỗng"
+    # Mọi dòng trong một bảng phải cùng split — nếu lệch thì "cùng giao thức" là lời nói dối
+    assert df["split_id"].nunique() == 1, \
+        f"{filename}: các dòng thuộc khác split: {sorted(df['split_id'].unique())}"
+    assert df["catalog_id"].nunique() == 1, \
+        f"{filename}: các dòng thuộc khác catalog: {sorted(df['catalog_id'].unique())}"
+
+
+@pytest.mark.parametrize("group", ["cf", "cb1", "cb2", "cb3", "cb4"])
+def test_ablation_tables_have_protocol_evidence(group):
+    """Bảng sweep trong `results/final/` phải đủ bằng chứng protocol từng dòng.
+
+    Đã xảy ra thật: 7 config chạy trước khi thêm cột `split_id` khiến bảng ablation
+    thiếu bằng chứng ở đúng những dòng đó — luận điểm "đã quét đủ sweep" mà bảng
+    không đủ giấy tờ thì không kiểm chứng được từ repo.
+    """
+    path = paths.FINAL_DIR / f"ablation-{group}.csv"
+    if not path.exists():
+        pytest.skip(f"{path.name} chưa được sinh — chạy collect_results_to_table --ablation")
+    df = pd.read_csv(path)
+    assert len(df) > 0, f"{path.name}: rỗng"
+    for col in ("split_id", "catalog_id"):
+        assert col in df.columns, f"{path.name}: thiếu cột {col}"
+        assert df[col].notna().all(), \
+            f"{path.name}: {df.loc[df[col].isna(), 'exp_name'].tolist()} thiếu {col}"
+        assert (df[col].astype(str).str.strip() != "").all(), \
+            f"{path.name}: có dòng {col} rỗng"
+    # Mỗi config chỉ xuất hiện đúng một lần — trùng là ghép nhầm bản kết quả
+    assert df["exp_name"].is_unique, \
+        f"{path.name}: có exp_name trùng: {df['exp_name'][df['exp_name'].duplicated()].tolist()}"

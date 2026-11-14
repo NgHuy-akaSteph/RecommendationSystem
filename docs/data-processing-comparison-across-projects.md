@@ -483,5 +483,68 @@ Thêm: `RecommenderEvaluator.evaluate_user` (`src/evaluation/recommender_evaluat
 
 ---
 
+## 11. Trạng thái sau hợp nhất (2026-11-14)
+
+Tài liệu này mô tả **hiện trạng trước khi hợp nhất** — cột "RS" ở các mục 1–7 là
+protocol cũ (global 70/30), **đã bị xoá hoàn toàn ở Phase 04a**. Mục này ghi trạng thái
+sau hợp nhất để người đọc không hiểu nhầm mô tả cũ là trạng thái hiện hành.
+
+### 11.1 Cột "RS" ở mục 1–7 giờ là lịch sử
+
+| Nội dung | Cũ (đã xoá) | Nay |
+|---|---|---|
+| Loader | `src/data_loader.py` | `src/data/load_movielens_filtered.py` |
+| Preprocessor | `src/data_loader.py` | `src/data/build_item_content_features.py` |
+| Split | `src/data_loader.py` (global 70/30) | `src/data/split_temporal_per_user.py` (per-user 80/20) |
+| Ma trận | `build_user_item_matrix` | `src/data/build_interaction_matrices.py` (`TrainData`/`Dataset`) |
+| Evaluator | `src/evaluation/` | `src/eval/batched_scoring_evaluator.py` (full ranking theo lô) |
+| Recommenders | `src/recommenders/` | `src/models/` (9 mô hình trong registry) |
+| Notebooks | `notebooks/` (00–04) | — (xoá) |
+
+Mọi dòng mô tả protocol cũ ở các mục 1–7 **giữ nguyên làm lịch sử**, vì chúng là bằng
+chứng cho các đính chính ở mục 4.3, 5.2 và 7.1.
+
+### 11.2 Bảng đối chiếu — trạng thái sau hợp nhất
+
+| Khía cạnh | Trước (RS cũ) | Sau hợp nhất | Đã quyết định ở |
+|---|---|---|---|
+| Lọc catalog | Không lọc (62.423 phim) | **Lọc Tag Genome (13.816 phim)** | Mục 3.3 |
+| Định dạng cache | CSV (451 MB) | **Parquet + npz + npy** | Phase 00 |
+| Split | Global 70/30 | **Per-user 80/20** | Mục 4.3 |
+| User đánh giá | 4.587 | **158.774** | Mục 4.3 |
+| Tập user đánh giá | Tất cả user trong test | **`dev` 20k / `full` 158.774** | Phase 00 |
+| Chống leakage | Kỷ luật | **Cấu trúc (`TrainData`/`Dataset`)** | Mục 6.2 |
+| Đặc trưng nội dung | Không | **3 nguồn (genres / tag / genome)** | Mục 6.3 |
+| Chấm điểm | Per-user API | **Full ranking theo lô 2.000 user** | Phase 00 |
+| Metric ngoài accuracy | Không | **Coverage, Gini, novelty, ILD, cold-start, Wilcoxon** | Phase 03–04 |
+| Confidence ALS | `1 + α·rating`, giữ cả rating thấp | **`1 + α`, chỉ relevant** | Mục 6.2 |
+| Số lần eval | 1 lần per user (chậm) | **Batch 2.000 user** | Phase 00 |
+
+### 11.3 Các câu hỏi ở mục 9 — đã trả lời
+
+| Câu hỏi | Quyết định |
+|---|---|
+| 1. Protocol kép, cần bảng phụ cắt đặc trưng 2012? | **Không** — bảng phụ mất 66% tập user; dùng bảng phân tầng 3 kỷ nguyên (`results/final/tag-leakage-strata.csv`) thay thế |
+| 2. Biến thể CB-1 giới hạn số tag/phim? | **Không** — ngoài phạm vi hợp nhất, để dành nghiên cứu riêng |
+| 3. Mann-Whitney giữa các tầng thời kỳ? | **Không** — bảng mô tả đã đủ để lập luận |
+| 4. Mốc cắt 2012-01-01 cứng hay theo phân vị? | **Theo phân vị** — 3 tầng kỷ nguyên (< 2006 / 2006–2012 / ≥ 2012) |
+
+### 11.4 Nguồn tham chiếu sau hợp nhất
+
+| Nội dung | Vị trí |
+|---|---|
+| Loader + preprocessor | `src/data/load_movielens_filtered.py`, `src/data/build_item_content_features.py` |
+| Split per-user | `src/data/split_temporal_per_user.py` |
+| Ma trận + hàng rào leakage | `src/data/build_interaction_matrices.py` |
+| Định danh catalog / split | `src/data/catalog_identity.py` |
+| Evaluator full-ranking theo lô | `src/eval/batched_scoring_evaluator.py` |
+| Registry 9 mô hình | `src/eval/model_registry.py` |
+| Cold-start item split | `src/eval/cold_start_item_split.py` |
+| Chẩn đoán leakage tag | `src/eval/analyse_tag_leakage.py` |
+| Bảng kết quả | `results/final/benchmark-{cf,cb,coldstart}.csv` |
+| Tóm tắt codebase | `docs/codebase-summary.md` |
+
+---
+
 *Cập nhật: 2026-11-14. Số liệu đo trực tiếp trên raw data của RS bằng `venv/bin/python`;
 số liệu CB trích từ `results/final/` của repo `recommendation-cb`.*

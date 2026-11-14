@@ -67,15 +67,23 @@ def test_docs_state_full_als_spread(path):
 
 @pytest.mark.parametrize("path", DOCS, ids=lambda p: p.name)
 def test_docs_state_real_sweep_counts(path):
-    """Số config thực tế đã chạy phải là CF 51 / CB 85 (sweep đã chạy đủ).
+    """Số config thực tế đã chạy phải là CF 51 / CB 93 (sweep đã chạy đủ).
 
     Trước đây là CF 49 / CB 8 — cây tài liệu cảnh báo "so sánh chưa cân bằng vì CF
-    được quét nhiều hơn". Sau khi sweep CB chạy đủ 85 config thì câu cảnh báo đó không
-    còn đúng, và tài liệu phải nói số mới.
+    được quét nhiều hơn". Sau khi sweep CB chạy đủ thì câu cảnh báo đó không còn
+    đúng, và tài liệu phải nói số mới.
+
+    Con số được **đối chiếu với `configs/`** chứ không hard-code: đếm file config
+    theo nhóm rồi so với con số tài liệu ghi. Nhờ vậy thêm config mới vào sweep mà
+    quên sửa tài liệu sẽ bị test bắt.
     """
     text = _text(path)
-    assert re.search(r"CF\s*51\s*/\s*CB\s*85|CF\s*51", text), \
-        f"{path.name}: thiếu số config thực tế CF 51 / CB 85"
+    cf_n = len([p for p in paths.CONFIG_DIR.glob("*.yaml")
+                if p.stem.split("-")[0] in ("cf", "rs")])
+    cb_n = len([p for p in paths.CONFIG_DIR.glob("*.yaml")
+                if p.stem.split("-")[0] in ("cb1", "cb2", "cb3", "cb4")])
+    assert re.search(rf"CF\s*{cf_n}\s*/\s*CB\s*{cb_n}|CF\s*{cf_n}\b", text), \
+        f"{path.name}: thiếu số config thực tế CF {cf_n} / CB {cb_n}"
 
 
 @pytest.mark.parametrize("path", DOCS, ids=lambda p: p.name)
@@ -111,6 +119,25 @@ def test_docs_do_not_claim_the_old_cf18_cb103_balance(path):
         if re.search(r"đảo|repo CB|ngược|sai|đính chính|số của CB", line, re.IGNORECASE):
             continue
         pytest.fail(f"{path.name}: còn tuyên bố CF 18 / CB 103 mà không đính chính:\n  {line.strip()}")
+
+
+@pytest.mark.parametrize("path", DOCS, ids=lambda p: p.name)
+def test_docs_do_not_claim_cb1_above_cb2(path):
+    """Cấm tuyên bố thứ hạng CB sai trong bảng phân tầng kỷ nguyên.
+
+    Đã xảy ra thật: tài liệu ghi "CB-1 > CB-2 > CB-3 ở cả ba tầng" trong khi
+    `results/final/tag-leakage-strata.csv` cho thấy **CB-2 dẫn ở cả ba tầng**
+    (0,0824/0,1263/0,1094 so với 0,0707/0,1256/0,1083 của CB-1). Đọc sai bảng này
+    thì luận điểm "tag không bị rò rỉ thời gian" vẫn đúng nhưng số so sánh sai.
+    """
+    text = _text(path)
+    for match in re.finditer(r"[^\n]*CB-1\s*>\s*CB-2[^\n]*", text):
+        line = match.group(0)
+        # Được phép nếu dòng đang **phủ nhận** tuyên bố cũ (đính chính lịch sử)
+        if re.search(r"cũ|đính chính|sai|không đúng|ngược|đảo|lịch sử",
+                     line, re.IGNORECASE):
+            continue
+        pytest.fail(f"{path.name}: còn tuyên bố thứ hạng CB sai (CB-1 > CB-2):\n  {line.strip()}")
 
 
 # ── script build_final_tables ───────────────────────────────────────────

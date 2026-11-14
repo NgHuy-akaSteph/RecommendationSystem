@@ -1,4 +1,4 @@
-"""Chạy bảng so sánh chung CF/CB: 8 mô hình × 3 giao thức.
+"""Chạy bảng so sánh chung CF/CB: 9 mô hình × 3 giao thức.
 
 Giao thức, theo đúng thứ tự phase 03:
 
@@ -28,7 +28,9 @@ ROOT = Path(__file__).resolve().parent.parent
 COLDSTART_DIR = ROOT / "data" / "processed" / "coldstart"
 CHILD_ENV = {**os.environ, "PYTHONIOENCODING": "utf-8"}
 
-# 8 mô hình của bảng chung. 5 config CF + 3 config CB, tất cả đã khoá tham số trên dev.
+# 9 mô hình của bảng chung. 5 config CF + 4 config CB, tất cả đã khoá tham số trên dev.
+# Danh sách này phải khớp với `src.eval.benchmark_tables.CF_SPECS + CB_SPECS` — test
+# `test_shared_benchmark_covers_all_table_specs` chặn trường hợp hai bên lệch nhau.
 CONFIGS = [
     "baseline-random.yaml",
     "baseline-mostpop.yaml",
@@ -38,6 +40,7 @@ CONFIGS = [
     "best-cb1-tfidf.yaml",
     "best-cb2-bm25.yaml",
     "best-cb3-genome.yaml",
+    "best-cb4-hybrid-content.yaml",
 ]
 
 # Sweep ALS (reg × iterations) chạy riêng trên dev để cân bằng số config CF với CB.
