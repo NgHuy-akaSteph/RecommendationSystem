@@ -1,6 +1,22 @@
+# IDE
+.idea/
 
-.idea
+# Môi trường Python
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
-./notes
-./plans
-data
+# Dữ liệu thô + cache — sinh lại bằng 3 bước tiền xử lý trong README
+data/
+
+# Ghi chú nội bộ — không track (quyết định user 2026-11-14)
+notes/
+plans/
+
+# Kết quả thí nghiệm: chỉ giữ bảng báo cáo cuối, bỏ artifact trung gian
+results/*
+!results/final/
+!results/figures/
+results/final/*
+!results/final/*.csv

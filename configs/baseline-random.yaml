@@ -1,0 +1,8 @@
+# Mốc dưới: xếp hạng ngẫu nhiên. NDCG@10 phải gần 0, dùng để phát hiện lỗi pipeline.
+exp_name: baseline-random
+model: random
+params:
+  seed: 42
+users: dev
+k_list: [5, 10, 20, 50]
+save_topk: false

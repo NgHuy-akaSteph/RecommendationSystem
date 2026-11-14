@@ -1,0 +1,25 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb4-00-pop-cb1-lam040
+model: cb4-hybrid
+params:
+  components:
+  - model: cb1-tfidf
+    params:
+      use_tags: true
+      min_df: 3
+      max_df: 0.5
+      max_features: 20000
+      sublinear_tf: true
+      ngram_range:
+      - 1
+      - 1
+      scorer: profile
+      weight_mode: binary_pos
+  pop_prior: 0.4
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

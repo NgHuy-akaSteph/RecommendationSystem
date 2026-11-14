@@ -1,0 +1,31 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb4-04-late-bm25-w050
+model: cb4-hybrid
+params:
+  components:
+  - model: cb2-bm25
+    params:
+      k1: 0.5
+      b: 0.0
+      min_df: 3
+      max_df: 0.5
+      max_features: 20000
+      scorer: profile
+      weight_mode: binary_pos
+  - model: cb3-genome
+    params:
+      standardize: zscore
+      threshold: 0.2
+      scorer: item_knn
+      weight_mode: binary_pos
+      k_neighbors: 100
+  weights:
+  - 0.5
+  - 0.5
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

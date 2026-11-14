@@ -1,0 +1,13 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb3-00-raw-profile
+model: cb3-genome
+params:
+  scorer: profile
+  weight_mode: binary_pos
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

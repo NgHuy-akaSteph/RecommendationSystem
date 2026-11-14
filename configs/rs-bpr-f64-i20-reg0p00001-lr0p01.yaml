@@ -1,0 +1,18 @@
+# BPR-MF: 20 epoch ở vùng tham số tốt (lr=0.01, reg=0.00001). num_threads=1 để reproducible.
+exp_name: rs-bpr-f64-i20-reg0p00001-lr0p01
+model: rs-bpr
+params:
+  factors: 64
+  learning_rate: 0.01
+  regularization: 0.00001
+  iterations: 20
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

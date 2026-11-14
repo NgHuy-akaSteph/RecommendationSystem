@@ -1,0 +1,18 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb2-01-k1-03-b000
+model: cb2-bm25
+params:
+  min_df: 3
+  max_df: 0.5
+  max_features: 20000
+  scorer: profile
+  weight_mode: binary_pos
+  k1: 0.3
+  b: 0.0
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

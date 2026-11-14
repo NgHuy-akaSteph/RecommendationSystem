@@ -1,0 +1,13 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cf-itemknn-k100
+model: cf-itemknn
+params:
+  k_neighbors: 100
+  weight_mode: binary_pos
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

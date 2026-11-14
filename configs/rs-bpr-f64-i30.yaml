@@ -1,0 +1,23 @@
+# BPR-MF: quét số epoch (nhánh tinh chỉnh quanh i10). num_threads=1 để reproducible.
+#
+# Bản `rs-bpr-f64-i30` đã được đo trước khi sweep thêm biến thể learning_rate/
+# regularization, nên kết quả nằm trong results/ mà thiếu file config tương ứng —
+# `collect()` loại nó như "kết quả mồ côi". File này khớp tham số đã đo nên sweep
+# epoch i10 → i20 → i30 → i100 được đầy đủ.
+exp_name: rs-bpr-f64-i30
+model: rs-bpr
+params:
+  factors: 64
+  learning_rate: 0.05
+  regularization: 0.01
+  iterations: 30
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

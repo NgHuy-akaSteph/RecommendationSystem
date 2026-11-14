@@ -1,0 +1,18 @@
+# BPR-MF: learning rate 0.008 ở vùng tham số tốt (i10, f64, reg=0.00001).
+exp_name: rs-bpr-f64-i10-reg0p00001-lr0p008
+model: rs-bpr
+params:
+  factors: 64
+  learning_rate: 0.008
+  regularization: 0.00001
+  iterations: 10
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

@@ -1,0 +1,15 @@
+[project]
+name = "recsys-unified"
+version = "0.1.0"
+description = "Hệ thống gợi ý hợp nhất trên MovieLens 25M — pipeline content-based + collaborative filtering"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+# Cho phép `pytest tests/` chạy được mà không cần `python -m pytest`:
+# thêm thư mục gốc vào sys.path để import được package `src`.
+pythonpath = ["."]
+testpaths = ["tests"]
+# `slow` = test chạy pipeline thật (vài phút). Bỏ qua bằng `-m "not slow"`.
+markers = [
+    "slow: chạy pipeline thật, mất vài phút",
+]

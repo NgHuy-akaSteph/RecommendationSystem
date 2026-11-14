@@ -1,0 +1,18 @@
+# BPR-MF: quét số chiều latent (i10, reg=0.01). num_threads=1 để reproducible.
+exp_name: rs-bpr-f128-i10
+model: rs-bpr
+params:
+  factors: 128
+  learning_rate: 0.05
+  regularization: 0.01
+  iterations: 10
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

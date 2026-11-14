@@ -1,0 +1,20 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb4-00-pop-cb3-lam160
+model: cb4-hybrid
+params:
+  components:
+  - model: cb3-genome
+    params:
+      standardize: zscore
+      threshold: 0.2
+      scorer: item_knn
+      weight_mode: binary_pos
+      k_neighbors: 100
+  pop_prior: 1.6
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

@@ -1,0 +1,13 @@
+exp_name: rs-itemcf-k50-centered
+model: rs-itemcf
+params:
+  k_neighbors: 50
+  weight_mode: centered
+  normalize_sim: false
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

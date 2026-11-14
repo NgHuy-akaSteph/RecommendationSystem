@@ -1,0 +1,6 @@
+Chỉ số,Giá trị
+Ngày gán tag sớm nhất (toàn bộ tags.csv),2005-12-24
+Trung vị ngày kết thúc huấn luyện (user tập phát triển),2006-09-25
+"Pearson(số tag của phim, độ phổ biến)",0.768
+"Spearman(số tag của phim, độ phổ biến)",0.700
+Số phim không có tag,183

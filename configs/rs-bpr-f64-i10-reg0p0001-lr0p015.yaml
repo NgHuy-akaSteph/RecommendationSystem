@@ -1,0 +1,18 @@
+# BPR-MF: lr=0.015 (i10, f64, reg=0.0001). num_threads=1 để reproducible.
+exp_name: rs-bpr-f64-i10-reg0p0001-lr0p015
+model: rs-bpr
+params:
+  factors: 64
+  learning_rate: 0.015
+  regularization: 0.0001
+  iterations: 10
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

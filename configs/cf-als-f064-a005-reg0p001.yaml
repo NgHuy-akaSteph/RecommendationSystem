@@ -1,0 +1,15 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cf-als-f064-a005-reg0p001
+model: cf-als
+params:
+  factors: 64
+  regularization: 0.001
+  iterations: 15
+  alpha: 5.0
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

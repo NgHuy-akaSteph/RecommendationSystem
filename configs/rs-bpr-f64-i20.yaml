@@ -1,0 +1,18 @@
+# BPR-MF: quét số epoch (nhánh tinh chỉnh quanh i10). num_threads=1 để reproducible.
+exp_name: rs-bpr-f64-i20
+model: rs-bpr
+params:
+  factors: 64
+  learning_rate: 0.05
+  regularization: 0.01
+  iterations: 20
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

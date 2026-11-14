@@ -1,0 +1,26 @@
+Chỉ số,Giá trị
+Số user,"162,540"
+Số item,"13,816"
+Số rating,"24,674,113"
+Mật độ ma trận,1.0988%
+Rating >= 4,50.1%
+Rating trung bình,3.54
+Rating/user (trung vị),71
+Rating/user (p90),351
+Rating/item (trung vị),288
+Rating thuộc 20% phim phổ biến nhất,84.4%
+Item có >= 1 tag,"13,633"
+Khoảng thời gian,1995-2019
+Số thể loại,19
+Số tag genome,"1,128"
+Relevance genome trung bình,0.116
+Cosine trung bình giữa hai phim (genome thô),0.61
+Lượt gán tag (sau làm sạch),"937,428"
+Từ tag khác nhau (sau làm sạch),"30,067"
+Tag/phim (trung vị),21
+Rating train,"19,801,784"
+Rating test (user hợp lệ),"4,831,397"
+Rating test liên quan (>= 4),"2,288,027"
+User hợp lệ để đánh giá,"158,774"
+Phim liên quan mỗi user trong test (trung vị),8
+User tập phát triển,"20,000"

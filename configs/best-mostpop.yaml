@@ -1,0 +1,8 @@
+# Baseline không cá nhân hoá theo Cremonesi et al. (2010).
+# Mọi mô hình cá nhân hoá phải vượt được mốc này mới có ý nghĩa.
+exp_name: baseline-mostpop
+model: mostpop
+params: {}
+users: dev
+k_list: [5, 10, 20, 50]
+save_topk: false

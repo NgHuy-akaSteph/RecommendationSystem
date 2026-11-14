@@ -1,0 +1,16 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb3-04b-item-knn-svd064-k050
+model: cb3-genome
+params:
+  standardize: zscore
+  svd_dim: 64
+  scorer: item_knn
+  weight_mode: binary_pos
+  k_neighbors: 50
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

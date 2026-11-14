@@ -1,5 +1,16 @@
 # Kế hoạch thống nhất RecommendationSystem và recommendation-cb
 
+> **Đã bị thay thế** (2026-11-13) bởi
+> [`plans/261113-2106-unify-recsys-and-recommendation-cb/plan.md`](261113-2106-unify-recsys-and-recommendation-cb/plan.md).
+>
+> **Phase 00–03 đã hoàn tất** (2026-11-14). Bảng so sánh chung đã chạy: 8 mô hình × 3
+> giao thức, kết quả ở `results/final/benchmark-{cf,cb,coldstart}.csv`. Phần còn lại
+> (dọn code legacy + viết `docs/`) là Phase 04.
+>
+> Bản này giữ lại làm **bản rà soát phân tích** (vì sao hai bảng kết quả hiện tại không so
+> trực tiếp được, và 4 lỗi P0 cụ thể của `RecommendationSystem`). Phần triển khai đã rút
+> gọn: 8 mô hình thay vì 14, 3 phase thay vì 4, bỏ phần deploy/demo, hybrid để dành.
+
 ## Kết luận rà soát
 
 `RecommendationSystem` là mẫu hợp lý cho **API gợi ý công khai**: nhận `userId`, trả

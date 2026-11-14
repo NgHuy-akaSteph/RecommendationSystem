@@ -5,3 +5,9 @@ scikit-learn==1.9.0
 scipy==1.18.1
 seaborn==0.13.2
 matplotlib==3.9.2
+pyarrow
+pytest
+PyYAML
+threadpoolctl
+tqdm
+tabulate

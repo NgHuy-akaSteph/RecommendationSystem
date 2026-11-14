@@ -1,0 +1,19 @@
+# BPR-MF 100 epoch — biến thể để đo ảnh hưởng của số epoch.
+# num_threads=1 để reproducible (implicit lấy mẫu âm bằng RNG chung giữa các luồng).
+exp_name: rs-bpr-f64-i100
+model: rs-bpr
+params:
+  factors: 64
+  learning_rate: 0.05
+  regularization: 0.01
+  iterations: 100
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

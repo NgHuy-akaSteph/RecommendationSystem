@@ -1,0 +1,16 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb3-05-ridge-lambda100
+model: cb3-ridge
+params:
+  svd_dim: 64
+  standardize: zscore
+  ridge_lambda: 100.0
+  min_train: 5
+  weight_mode: binary_pos
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

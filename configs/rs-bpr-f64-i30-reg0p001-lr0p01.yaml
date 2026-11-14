@@ -1,0 +1,18 @@
+# BPR-MF: learning rate 0.01, nhiều epoch hơn. num_threads=1 để reproducible.
+exp_name: rs-bpr-f64-i30-reg0p001-lr0p01
+model: rs-bpr
+params:
+  factors: 64
+  learning_rate: 0.01
+  regularization: 0.001
+  iterations: 30
+  verify_negative_samples: true
+  random_state: 42
+  num_threads: 1
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false

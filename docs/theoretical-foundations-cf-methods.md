@@ -1,5 +1,19 @@
 # Lý Thuyết Các Phương Pháp Collaborative Filtering
 
+> ⚠️ **Tài liệu legacy — mô tả protocol CŨ (split global 70/30).**
+>
+> Tài liệu này giải thích thuật toán theo cách làm của `RecommendationSystem` trước
+> khi hợp nhất với `recommendation-cb`. Nó **không phải** đường chạy sinh ra số liệu
+> báo cáo, và các file code nó tham chiếu (`src/evaluation/`, `src/recommenders/`,
+> `src/data_loader.py`, `notebooks/`) **đã bị xoá** ở Phase 04.
+>
+> **Đường chạy hiện hành:** xem [`README.md`](../README.md) và
+> [`docs/data-processing-comparison-across-projects.md`](./data-processing-comparison-across-projects.md)
+> (mục 7.1 liệt kê 4 lỗi đánh giá của protocol cũ).
+>
+> Giá trị còn lại của tài liệu này: phần **giải thích thuật toán** (công thức, trực
+> giác, cài đặt) vẫn đúng và hữu ích — chỉ phần *đường chạy* và *số liệu* là cũ.
+
 > **Dành cho người mới:** Document này giải thích 3 phương pháp Collaborative Filtering (CF) mà dự án sử dụng. Mỗi phương pháp được trình bày theo thứ tự: **ví dụ đời thường → ý tưởng chính → công thức toán → cách dùng trong code**.
 
 ## Tóm tắt

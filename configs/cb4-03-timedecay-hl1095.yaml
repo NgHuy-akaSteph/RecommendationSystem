@@ -1,0 +1,22 @@
+# Sinh bởi scripts/generate_ablation_configs.py — không sửa tay
+exp_name: cb4-03-timedecay-hl1095
+model: cb1-tfidf
+params:
+  use_tags: true
+  min_df: 3
+  max_df: 0.5
+  max_features: 20000
+  sublinear_tf: true
+  ngram_range:
+  - 1
+  - 1
+  scorer: profile
+  weight_mode: binary_pos
+  half_life_days: 1095.0
+users: dev
+k_list:
+- 5
+- 10
+- 20
+- 50
+save_topk: false
