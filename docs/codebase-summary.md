@@ -33,6 +33,9 @@ venv/bin/python -m pytest tests/
 Bảng so sánh chung 9 mô hình × 3 giao thức: `scripts/run_shared_benchmark.py`
 (`--protocol dev|full|coldstart`).
 
+Chi tiết cách chạy giao thức `full` (thay cho `dev`), thời gian/disk cần, và bẫy thường
+gặp: [`run-full-protocol-guide.md`](run-full-protocol-guide.md).
+
 ---
 
 ## 2. Cây thư mục

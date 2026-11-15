@@ -5,6 +5,57 @@ thay đổi và cách kiểm chứng.
 
 ---
 
+## 2026-11-15 — Hướng dẫn chạy giao thức `full` + sinh lại bảng `dev` bị cũ
+
+**Phạm vi:** Viết tài liệu hướng dẫn chạy giao thức `full` (158.774 user) thay cho `dev`
+(20.000 user). Trong lúc kiểm chứng mọi lệnh và số liệu trong tài liệu, phát hiện và vá
+một bảng kết quả đã commit bị **cũ hơn code**. Không đổi thuật toán, không đổi số liệu
+đã công bố.
+
+### Tài liệu mới
+
+`docs/run-full-protocol-guide.md` — 8 mục: khác biệt `dev` ↔ `full`, điều kiện trước khi
+chạy, cách A (9 mô hình bảng chính ≈ 10 phút) vs cách B (sweep 144 config ≈ 3,1 giờ),
+giao thức `coldstart`, những chỗ dễ sai, và checklist.
+
+Mọi lệnh trong tài liệu đã **chạy thử**; mọi con số đã **đo từ `results/final/`**:
+thời gian `fit_s`/`score_s` từng mô hình, kích thước artifact thật (`topk.npy` =
+`[158774, 50]` `int32` ≈ 31,8 MB), số dòng dữ liệu (`train` 19.801.784 / `test` 4.831.397 /
+162.540 user), và độ lệch `dev` ↔ `full` của cả 9 mô hình.
+
+### Bảng `dev` đã commit bị cũ — đã sinh lại
+
+| File | Vấn đề | Sau khi sửa |
+|---|---|---|
+| `results/final/benchmark-cb-dev.csv` | Chỉ **3 dòng** — thiếu CB-4 Hybrid (config `best-cb4-hybrid-content.yaml` được thêm sau lần commit bảng này). Bảng `full` tương ứng có 4 dòng | 4 dòng, khớp bảng `full` |
+| `results/final/benchmark-cf-dev.csv` | Thiếu cột `model` (bằng chứng tra ngược về lớp mô hình) | Đủ cột `model` |
+| `results/final/wilcoxon-cb-dev.csv` | Mốc là CB-2 BM25, thiếu hẳn CB-4 | Mốc = CB-4 Hybrid, đủ 3 dòng |
+
+**Giá trị các dòng đã có không đổi** — kiểm chứng bằng so sánh chính xác 10 chữ số
+thập phân cho cả 3 dòng CB cũ (diff = 0). Đây là vá bằng chứng, không phải đổi kết quả.
+
+> Báo cáo §5.2.3 (`docs/report/05-experimental-results.md`) trích số `dev` của CB-4 từ
+> `dev-summary.csv` nên **không bị ảnh hưởng** — nhưng bảng CSV mà báo cáo dẫn nguồn thì
+> thiếu dòng, và người đọc tự đối chiếu sẽ không tìm thấy CB-4.
+
+### Kiểm chứng
+
+| Hạng mục | Kết quả |
+|---|---|
+| `venv/bin/python scripts/check_report_numbers.py` | **0 lệch** (24.831 giá trị từ 27 bảng CSV) |
+| `pytest tests/` | **272 passed** |
+| Smoke test `run_experiment_from_config --users full` | CB-3 cho NDCG@10 = 0,0713 / HR@10 = 0,3381 — **khớp tuyệt đối** `benchmark-cb.csv` |
+| Thứ hạng `dev` ↔ `full` | Khớp **tuyệt đối 9/9 mô hình**, lệch NDCG@10 −0,7% → +2,2% |
+
+### Ghi chú
+
+- Smoke test đã ghi đè `results/full_cb3-04d-item-knn-tau020-k100_metrics.csv` (chỉ
+  khác ở cột `fit_s`/`score_s` do đo lại thời gian) → đã khôi phục về 0,27s / 28,21s
+  cho khớp `full-summary.csv` đã commit.
+- Chưa đẩy commit lên `origin/v1`.
+
+---
+
 ## 2026-11-15 — Viết báo cáo Chương 5–6 + vá 3 sai lệch
 
 **Phạm vi:** Viết prose cho Chương 5 (Kết quả) và Chương 6 (Chống rò rỉ & tranh luận)

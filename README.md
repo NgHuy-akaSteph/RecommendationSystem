@@ -235,6 +235,7 @@ nhưng rất nhạy với `α` và `factors`**. Cấu hình thắng vẫn là `f
 **Tài liệu chính (theo repo):**
 
 - [`docs/codebase-summary.md`](docs/codebase-summary.md): cấu trúc repo, module nào làm gì, một đường chạy duy nhất, bảng 9 mô hình.
+- [`docs/run-full-protocol-guide.md`](docs/run-full-protocol-guide.md): **hướng dẫn chạy giao thức `full`** (158.774 user) thay cho `dev` — lệnh, thời gian, RAM/disk, bẫy thường gặp.
 - [`docs/system-architecture.md`](docs/system-architecture.md): luồng dữ liệu, hợp đồng `BaseRecommender`, hàng rào chống leakage.
 - [`docs/development-roadmap.md`](docs/development-roadmap.md): trạng thái phase, kết quả đạt được, việc còn lại.
 - [`docs/data-processing-comparison-across-projects.md`](docs/data-processing-comparison-across-projects.md): so sánh xử lý dữ liệu RS vs `recommendation-cb` + trạng thái sau hợp nhất.
