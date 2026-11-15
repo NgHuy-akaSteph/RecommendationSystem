@@ -4,10 +4,15 @@
 **Dataset:** MovieLens 25M (lọc còn 13.816 phim có Tag Genome)
 **Mô hình:** 9 mô hình — 3 CF, 4 Content-based, 2 baseline
 **Nguồn sự thật:** mọi số liệu trong khung này lấy từ `results/final/` (27 bảng) và
-`results/figures/` (9 hình), đã commit trong repo. Không chép tay số.
+`results/figures/` (10 hình), đã commit trong repo. Không chép tay số.
 
 > **Khung này thay thế hoàn toàn** `notes/report-structure.md` cũ (viết cho MovieLens 1M,
 > 2 methods, 18 config — lệch toàn bộ với hiện trạng).
+
+> **Trạng thái viết:** Chương 5–6 đã có bản thảo đầy đủ tại `docs/report/`
+> (`05-experimental-results.md`, `06-leakage-analysis-and-discussion.md`) — khung này là
+> **đề mục + mô tả nội dung** cho các chương còn lại (1–4, 7–8), không phải bản thảo.
+> Mọi số trong khung đã đối chiếu với `results/final/` (xem `scripts/check_report_numbers.py`).
 
 ---
 
@@ -65,6 +70,14 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 | Full ranking, 3 giao thức | Bảng no-leak (mất 66% user) |
 | Metadata hậu kỳ — **phải nêu rõ** | Hybrid CF+CB ở tầng late fusion |
 
+> **Ghi chú về hàng "Bảng no-leak":** con số "mất 66% user" **không có bảng số trong
+> repo** — repo hiện chỉ có split `temporal80_20` (per-user) và biến thể
+> `temporal80_20+coldstart_item`. Khi viết Chương 1, hoặc:
+> (a) bỏ hàng này khỏi bảng phạm vi, hoặc
+> (b) diễn đạt lại thành câu định tính: *"không dựng được nhánh 'no-leak' sạch trên
+> split per-user vì đặc trưng item dùng chung toàn corpus — xem Chương 6.1"*.
+> **Không được ghi số 66% nếu không kèm bảng chứng.**
+
 ### 1.5 Cấu trúc báo cáo
 - Mỗi chương trả lời RQ nào (đặt ở đầu chương)
 
@@ -104,6 +117,8 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 #### 2.2.5 BPR-MF (0,5 trang)
 - Rendle et al. (2009): pairwise ranking loss, negative sampling
 - Vì sao `num_threads=1` (tái lập được tuyệt đối, đánh đổi 40s thay vì 7s)
+- **Con số chính đứng:** `fit_s = 39,84` (giao thức `full`, 158.774 user) —
+  lấy từ cột `fit_s` của `full-summary.csv`, dùng chung cho Chương 2 và Chương 7.3
 
 ### 2.3 Content-based Filtering (2 trang)
 **Người 2**
@@ -114,6 +129,21 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 #### 2.3.2 TF-IDF và BM25 (1 trang)
 - Công thức TF-IDF, định nghĩa BM25 (`k1`, `b`)
 - **Vì sao BM25 hay hơn TF-IDF ở đây** — bằng chứng từ `tag-leakage-strata.csv`
+- ⚠️ **Coi chừng nhầm lẫn 2 nguồn bằng chứng (đã kiểm tra lại):**
+  - Bảng phân tầng 3 kỷ nguyên (`tag-leakage-strata.csv`) cho thấy **CB-2 BM25 dẫn
+    CB-1 TF-IDF ở cả 3 tầng**: 0,0824 / 0,1263 / 0,1094 (BM25) so với
+    0,0707 / 0,1256 / 0,1083 (TF-IDF).
+  - Ở **giao thức `full`** (bảng chính Chương 5) BM25 cũng vẫn cao hơn:
+    CB-2 = 0,0998 > CB-1 = 0,0937.
+  - **Điểm dễ sai khi viết:** nhãn "CB-1 TF-IDF" ở **cả hai** bảng trên đều trỏ tới
+    **cùng một config time-decay** `cb4-03-timedecay-hl0365` — không phải
+    `cb1-01-add-tags-tfidf` (config TF-IDF thuần, NDCG@10 ở `dev` = 0,091437).
+    Khi so sánh phải ghi rõ **tên config**, không so hai số trần.
+- **Không dùng** `tag-leakage-strata.csv` làm bằng chứng cho phát biểu chung về BM25 —
+  bảng đó phân tầng theo **thời kỳ user**, không phải so sánh sweep thuần.
+- **Chi phí tính toán** (nên nêu ở §2.3.2 vì CB thắng cold-start nhưng chậm hơn nhiều):
+  `score_s` ở giao thức `full` (`full-summary.csv`): CB-2 = 115,14s, CB-1 = 105,52s
+  so với ALS = 24,91s, BPR = 21,67s.
 
 #### 2.3.3 Cách dựng hồ sơ user (0,5 trang)
 - Trung bình có trọng số của vector item; 3 chế độ trọng số `binary_pos` /
@@ -193,9 +223,22 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 - **Kết quả:** 158.774 user hợp lệ (train 19.801.784 rating, test 4.831.397 rating,
   trong đó 2.288.027 rating relevant)
 
-> **Điểm phải nhấn:** split global 70/30 của protocol cũ chỉ đánh giá được **4.587 user**
-> (phần lớn user ML-25M ngừng hoạt động trước 2015 nên không có dữ liệu test).
-> Split per-user đánh giá được **158.774 user** — tăng 34,6 lần số user đánh giá.
+> ⚠️ **ĐÃ KIỂM TRA — con số "4.587 user" của split global 70/30 KHÔNG tái lập được
+> từ dữ liệu hiện tại.** Đã thử lưới các biến thể trên `ratings_genome.parquet`:
+>
+> | Cách chia | `min_train` | ngưỡng relevant | User hợp lệ |
+> |---|---:|---:|---:|
+> | global 70/30 theo quantile timestamp | 5 | ≥ 4,0 | **4.399** |
+> | global 70/30 | 1 | ≥ 4,0 | 4.450 |
+> | global 75/25 | 5 | ≥ 4,0 | 5.622 |
+> | **per-user 80/20 (đang dùng)** | 5 | ≥ 4,0 | **158.774** |
+>
+> → **Hệ số tăng thực tế: 158.774 / 4.399 ≈ 36,1 lần** (không phải 34,6).
+> Khi viết Chương 3, dùng **4.399 user / ×36,1** và ghi rõ cách tái lập:
+> `ratings_genome.parquet` → global 70/30 theo quantile của `ts` → lọc
+> `train ≥ 5` & `test có rating ≥ 4,0`. Nếu không muốn chạy lại, **bỏ hẳn con số**
+> và chỉ giữ lập luận định tính: *split per-user giữ được toàn bộ user có lịch sử
+> ≥ 5 tương tác, thay vì chỉ những user còn hoạt động sau mốc thời gian chia*.
 
 #### 3.3.4 Dựng ma trận và chuẩn hoá chỉ số (0,5 trang)
 - Ma trận thưa CSR, remap chỉ số user/item về 0..n-1
@@ -225,14 +268,23 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 |---|---|---|
 | CB-1 TF-IDF | TF-IDF trên tag + genres | sweep 15 config |
 | CB-2 BM25 | BM25 trên tag, lưới `k1` × `b` | sweep 21 config |
-| CB-3 Tag Genome | 1.128 chiều genome, chuẩn hoá z-score/min-max, SVD | sweep 22 config |
-| CB-4 Hybrid | Late fusion BM25 + Genome | sweep 35 config |
+| CB-3 Tag Genome | 1.128 chiều genome, chuẩn hoá z-score/min-max, SVD | sweep 22 config (19 `cb3-genome` + 3 `cb3-ridge`) |
+| CB-4 Hybrid | Late fusion BM25 + Genome | sweep 35 config (32 `cb4-hybrid` + 3 `cb1-tfidf` time-decay) |
+
+> ⚠️ **Ghi chú về số config khi viết Chương 4:** các con số trên là **số dòng trong bảng
+> ablation** (`ablation-{cf,cb1,cb2,cb3,cb4}.csv`), tổng **144** = 51 CF + 93 CB.
+> Thư mục `configs/` có **159 file** vì gồm thêm 13 file `best-*.yaml` (bản config
+> đã khoá, trùng `exp_name` với một dòng trong sweep) + 2 file `baseline-*.yaml`.
+> → **Phải phân biệt rõ "144 config sweep" với "159 file trong `configs/`"**;
+> dùng nhầm sẽ mâu thuẫn với §5.2 (144 dòng = 51 CF + 93 CB).
 
 - **Cơ chế late fusion:** chuẩn hoá điểm rồi tổng trọng số (`w`)
 - **Bẫy `pop_prior`:** bản có λ_pop = 0,4 đạt NDCG@10 = 0,1081 ở giao thức thường
   (cao hơn bản content thuần 0,1054) nhưng **sụp về 0,0010 ở cold-start** vì mọi phim
   held-out có popularity = 0 → `frac_unseen@10` rơi từ 0,2223 xuống 0,0036.
   → **Bảng chính lấy bản content thuần**; bản có prior chỉ để đối chiếu.
+  (Đã đối chiếu: `full_cb4-06-late-bm25-pop-lam0040` NDCG@10 = 0,1081 /
+  `coldstart_...` = 0,00095; `frac_unseen@10` ở coldstart: 0,2223 → 0,0036.)
 
 ### 4.4 Mô hình Collaborative Filtering (2 trang)
 **Người 1**
@@ -250,13 +302,22 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 #### 4.5.1 Ba giao thức
 | Giao thức | User | Dùng để |
 |---|---:|---|
-| `dev` | 20.000 | **chọn tham số** (sweep 159 config) |
+| `dev` | 20.000 | **chọn tham số** (sweep 144 config = 51 CF + 93 CB) |
 | `full` | 158.774 | bảng chính — chạy **một lần** sau khi khoá config |
 | `coldstart` | 10.992 | cold-start item (1.381 phim giữ lại theo 5 nhóm năm phát hành) |
+
+> ⚠️ **Số ở cột "Dùng để" đã sửa: 159 → 144.** 144 là số dòng sweep thực sự đã chạy
+> (51 CF + 93 CB). Con số 159 là **số file trong `configs/`** (144 sweep + 13 `best-*`
+> + 2 `baseline-*`) — dùng 159 ở đây sẽ mâu thuẫn với §5.2.
+> Số user `coldstart` = 10.992 là `n_eval_users` của bảng `coldstart-item.csv`;
+> lưu ý bảng `beyond-accuracy-coldstart.csv` dùng **10.988** user (đã loại 4 user
+> không có tín hiệu) — nếu viết "10.992" ở §6.4 thì phải nói rõ là khác bảng nào.
 
 #### 4.5.2 Vì sao full ranking, không sampled
 - Chấm trên toàn bộ 13.816 ứng viên; sampled LOO có thể đảo thứ hạng (Krichene & Rendle 2020)
 - Giao thức thay thế LOO + 100 negative đã cài nhưng **chưa chạy** — nêu rõ trong phần giới hạn
+  (`scripts/run_sampled_loo_comparison.py` đã sẵn sàng nhưng `results/` **chưa có**
+  file kết quả LOO/Kendall τ nào)
 
 #### 4.5.3 Bằng chứng protocol
 - Mỗi dòng kết quả mang `split_id` + `catalog_id` + `seed`
@@ -267,6 +328,10 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 ## Chapter 5: Experimental Results (8 trang)
 
 **Người phụ trách:** Người 1 (5.2) + Người 2 (5.3)
+
+> ✅ **Bản thảo đã có:** `docs/report/05-experimental-results.md` — khung dưới đây chỉ là
+> đề mục + mô tả nội dung, số liệu trong bản thảo đã qua `scripts/check_report_numbers.py`.
+> Khi viết lại, **lấy số từ bản thảo**, đừng chép lại từ khung này.
 
 ### 5.1 Kết quả chính — bảng chung (2 trang)
 **Người 2**
@@ -366,14 +431,25 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
 ### 5.5 Kết quả theo mức độ hoạt động của user (1 trang)
 **Người 1**
 - 3 nhóm theo số tương tác train: 5–30 / 31–100 / >100 (`coldstart-user-buckets.csv`)
-- **Phát hiện:** mô hình CB **cải thiện theo độ dài lịch sử** (CB-2: 0,0793 → 0,0799 → 0,1418)
+- **Số user mỗi nhóm:** 41.343 / 66.131 / 51.300 — tổng 158.774
+- **Phát hiện 1:** mô hình CB **cải thiện theo độ dài lịch sử** (CB-2: 0,0793 → 0,0799 → 0,1418)
   chứ không giảm — ngược với trực giác "content-based chỉ tốt cho user mới"
+- **Phát hiện 2 (quan trọng hơn):** khoảng cách CF–CB **thu hẹp dần** theo độ dài lịch sử —
+  ở nhóm 5–30, ALS vượt CB-4 **0,0465** (0,1241 vs 0,0777); ở nhóm >100 chỉ còn **0,0219**
+  (0,1786 vs 0,1567). → CB cạnh tranh được với CF ở nhóm user lịch sử ngắn.
+  *(Đây mới là phát hiện đáng nêu; khung cũ chỉ ghi phát hiện 1.)*
+- **Phát hiện 3:** nhóm >100 có NDCG cao hơn rõ rệt ở *mọi* mô hình — hệ quả của cách
+  chia tập (user nhiều tương tác train ⇒ nhiều tín hiệu + nhiều phim relevant trong test)
 
 ---
 
 ## Chapter 6: Phân tích chống rò rỉ & tranh luận (6 trang)
 
 **Người phụ trách:** Người 2 (lead) + Người 1
+
+> ✅ **Bản thảo đã có:** `docs/report/06-leakage-analysis-and-discussion.md` — đã có cả
+> §6.5.2 "Giới hạn của chính kết luận chống rò rỉ" (yêu cầu bắt buộc của kế hoạch).
+> Khung dưới đây chỉ là đề mục + mô tả nội dung.
 
 > **Chương này là điểm khác biệt của đồ án** — nơi biến "con số" thành "kết luận đáng tin".
 
@@ -383,6 +459,15 @@ cold-start, MovieLens 25M, offline evaluation, NDCG
   là **2006-09-25** → phần lớn user tập phát triển **train trước khi tag tồn tại**
 - **Confound đo được:** Pearson(số tag của phim, độ phổ biến) = **0,768**
   (Spearman 0,700) → tag và popularity **không độc lập**
+- Nguồn: `results/final/tag-leakage-summary.csv` (5 chỉ số) — gồm cả "Số phim không có
+  tag = 183" (dùng ở §3.2)
+- **Phải nêu đủ 3 tầng rủi ro**, không chỉ metadata:
+  1. `genome-scores.csv` — không có timestamp
+  2. `tags.csv` — có timestamp nhưng bắt đầu muộn (2005-12-24)
+  3. **CF cũng lệch thời gian ở mức giao thức** — ma trận train chứa rating của user khác
+     nằm sau mốc train của user đang xét (xem chú thích trong
+     `src/eval/analyse_tag_leakage.py`). Bảng 6.2 cố ý đưa CF vào **cùng** bảng để
+     chứng minh rủi ro là của *giao thức*, không riêng của CB.
 
 ### 6.2 Bảng phân tầng 3 kỷ nguyên (2 trang)
 `tag-leakage-strata.csv` — chia user theo thời kỳ rating:
@@ -406,6 +491,14 @@ CF không bị CB vượt ở tầng nào.
 > **Lưu ý bắt buộc khi viết:** thứ hạng là **CB-2 ≥ CB-1 > CB-3**, không phải
 > "CB-1 > CB-2 > CB-3". Chênh lệch rất nhỏ ở tầng 2006–2012 (0,1263 vs 0,1256) nhưng
 > BM25 dẫn ở cả ba tầng.
+>
+> **Số user mỗi tầng (đã kiểm tra):** 75.194 / 29.657 / 53.923 — tổng 158.774.
+> Nên ghi kèm vì giúp người đọc thấy tầng "giao thời" mỏng hơn tầng "trước kỷ nguyên".
+>
+> **⚠️ Cảnh báo nhầm lẫn:** nhãn "CB-1 TF-IDF (tag)" trong bảng này trỏ tới config
+> **time-decay** `cb4-03-timedecay-hl0365`, không phải `cb1-01-add-tags-tfidf`. Nếu
+> trích dẫn "CB-1 TF-IDF" ở §2.3.2 hoặc §6.2 mà không nói config, người đọc có thể
+> tưởng đang so `cb1-01-add-tags-tfidf` (NDCG@10 ở `dev` = 0,091437).
 
 ### 6.3 Ảnh hưởng của chế độ trọng số hồ sơ (1 trang)
 `weight-mode-buckets.csv` + `weight-mode-paired-tests.csv`:
@@ -441,6 +534,24 @@ hướng ngược: CF dồn suất vào ít phim hơn.
 | Muốn độ phủ rộng, tránh dồn suất | **CB** (coverage 49–67%) | Chương 6.4 |
 | Muốn giải thích được | **CB** (tương đồng nội dung) | Chương 4.3 |
 
+#### 6.5.1 Giới hạn của chính kết luận chống rò rỉ (bắt buộc)
+> Yêu cầu bắt buộc của kế hoạch — **đã có** trong bản thảo
+> `docs/report/06-leakage-analysis-and-discussion.md` §6.5.2. Khi viết lại, phải nêu:
+> - Chưa chứng minh được "không rò rỉ" — chỉ chứng minh được **thứ hạng bất biến** qua
+>   3 tầng kỷ nguyên (tức *không có bằng chứng* rò rỉ, không phải *có bằng chứng* không rò rỉ)
+> - Mốc chia tầng 2006 / 2012 là **cứng**, chưa kiểm định thống kê giữa các tầng
+> - Tầng "giao thời" (29.657 user) mỏng hơn hai tầng còn lại
+> - Confound tag ↔ popularity (Pearson 0,768) **vẫn còn** — chưa có biến thể cắt nó
+>   (xem hướng phát triển ở Chương 8.2)
+> - Số tuyệt đối của CB vẫn lạc quan hơn môi trường production
+
+#### 6.5.2 Điều gì thực sự đã chứng minh được (bổ sung)
+- So sánh **giữa các mô hình** trên cùng giao thức vẫn công bằng, vì điều kiện rò rỉ
+  là giống nhau cho mọi mô hình (kể cả CF — xem §6.1)
+- Điều được chứng minh: **metadata hậu kỳ không đảo chiều thứ hạng giữa các phương pháp**,
+  và phần lớn lợi thế của tag đến từ tính chất nội dung (đối chứng "chỉ genres"
+  chỉ đạt 0,0026–0,0060)
+
 ---
 
 ## Chapter 7: Discussion (4 trang)
@@ -461,10 +572,13 @@ hướng ngược: CF dồn suất vào ít phim hơn.
 | **Vị trí trong đồ án** | 0,1375 | 0,1054 → 0,0347 (cold-start) |
 
 ### 7.3 Bài học về thiết kế protocol
-- **Split per-user vs global:** 4.587 → 158.774 user đánh giá (×34,6)
+- **Split per-user vs global:** 4.399 → 158.774 user đánh giá (**×36,1**)
+  - ⚠️ Đã sửa từ "4.587 / ×34,6" — con số cũ **không tái lập được** từ dữ liệu hiện tại
+    (xem bảng biến thể ở §3.3.3). Dùng **4.399 / ×36,1** hoặc bỏ số.
 - **Bằng chứng protocol trên từng dòng:** `split_id` + `catalog_id` — biến "cùng giao thức"
   từ lời tuyên bố thành thứ kiểm chứng được
 - **Tái lập được > nhanh:** BPR `num_threads=1` đánh đổi 40s để số tuyệt đối ổn định
+  (`fit_s = 39,84` ở `full` cho 158.774 user — `full-summary.csv`)
 - **Bẫy popularity prior:** tốt ở giao thức thường, chết ở cold-start — cần đánh giá
   trên **cả hai** giao thức trước khi chọn
 
@@ -531,9 +645,16 @@ hướng ngược: CF dồn suất vào ít phim hơn.
 
 - **A.** Bảng sweep đầy đủ — `results/final/ablation-{cf,cb1,cb2,cb3,cb4}.csv` (144 dòng)
 - **B.** Bảng bootstrap CI và Wilcoxon đầy đủ
+  - `bootstrap-ci.csv` (13 dòng, giao thức `full`), `wilcoxon-{cf,cb,coldstart}.csv`
+  - Thêm: `wilcoxon-{cf,cb}-dev.csv` cho bảng `dev`
 - **C.** Hình EDA bổ sung (long-tail, genome)
 - **D.** Quy trình tái lập: `docs/codebase-summary.md` (môi trường, lệnh, cấu trúc repo)
 - **E.** Bảng thống kê dataset đầy đủ — `dataset-summary.csv`
+- **F.** Kiểm chứng số liệu (nên đưa vào phụ lục để người đọc tự kiểm):
+  - `python scripts/check_report_numbers.py` → đối chiếu 2 file báo cáo với 27 bảng CSV
+  - `pytest tests/test_report_sweep_spreads.py tests/test_report_numbers_consistency.py`
+  - Ghi rõ: biên độ sweep trong báo cáo được **tính động** từ `ablation-*.csv`
+    (`src/eval/sweep_spread.py`), không hard-code — người đọc chạy lại là tự xác minh.
 
 ---
 
@@ -567,8 +688,10 @@ hướng ngược: CF dồn suất vào ít phim hơn.
 ## Checklist trước khi nộp
 
 - [ ] Mọi số liệu trong báo cáo **đối chiếu được** với `results/final/*.csv` — không chép tay
+  - Chạy `python scripts/check_report_numbers.py` → phải báo **0 lệch**
+  - Chạy `pytest tests/test_report_sweep_spreads.py tests/test_report_numbers_consistency.py` → xanh
 - [ ] Thứ hạng CB viết là **CB-2 ≥ CB-1 > CB-3** (không phải "CB-1 > CB-2")
-- [ ] Số config sweep viết là **CF 51 / CB 93**
+- [ ] Số config sweep viết là **CF 51 / CB 93** (tổng 144 dòng ablation) — **không** viết 159
 - [ ] Nêu rõ metadata hậu kỳ (Chương 6.1)
 - [ ] Nêu rõ `pop_prior` giết cold-start (Chương 4.3)
 - [ ] Nêu rõ BPR `num_threads=1` và lý do (Chương 2.2.5)
@@ -576,3 +699,7 @@ hướng ngược: CF dồn suất vào ít phim hơn.
 - [ ] Mọi bảng trong báo cáo mang `split_id` + `catalog_id` khi trích dẫn từ repo
 - [ ] Chương 6 nêu rõ **giới hạn** của chính kết luận chống rò rỉ
 - [ ] Ghi rõ giao thức LOO **chưa chạy** (Chương 7.4)
+- [ ] **Không** dùng các số chưa có bằng chứng trong repo: "4.587 user" (đã sửa → 4.399),
+  "×34,6" (→ ×36,1), "mất 66% user" (→ bỏ hoặc định tính), "159 config" (→ 144)
+- [ ] Chương 5–6 lấy nguyên văn từ `docs/report/` — **không viết lại số** (hai bản
+  phải khớp từng con số, checker sẽ bắt)
