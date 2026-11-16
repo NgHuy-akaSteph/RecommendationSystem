@@ -305,6 +305,121 @@ tuyệt đối này — và §6.5.2 nêu lý do.
 
 ---
 
+## 6.6 Trình diễn hệ thống — chứng minh kết luận bằng giao diện
+
+Các bảng ở Chương 5–6 là **số liệu tổng hợp trên 158.774 user**. Để kết luận đó có
+được "cảm" được và kiểm chứng được tay, đồ án đóng gói một **demo Streamlit 3 tab**
+(`demo/`) chạy trên **đúng các mô hình đã dùng để sinh `results/final/`** — không
+phải bản riêng, không phải số liệu mô phỏng.
+
+### 6.6.1 Kiến trúc tầng phục vụ (serving layer)
+
+Demo không gọi lại `src.eval.*` — evaluator chỉ dùng offline. Thay vào đó, mô hình
+được **fit một lần** rồi lưu thành artifact:
+
+| Artifact | Nội dung | Kích thước |
+|---|---|---:|
+| `demo/artifacts/cf-als/factors.npz` | ma trận factor user × item của ALS | ~44 MB |
+| `demo/artifacts/cb2-bm25/state.pkl` | trạng thái scorer BM25 (vector hoá + IDF) | ~30 MB |
+| `demo/artifacts/train_csr.npz` | ma trận `train` dạng CSR (để mask phim đã xem) | ~52 MB |
+| `demo/artifacts/coldstart/` | bộ artifact thứ hai, fit trên split cold-start | — |
+
+Nhờ vậy `streamlit run demo/app.py` khởi động trong **~1,6 giây** thay vì phải nạp
+toàn bộ dataset (17,9 s) và fit lại ALS (15,4 s). Tầng phục vụ nằm ở `src/api/`:
+
+- `model_artifacts.py` — lưu/nạp factor matrix, trạng thái content scorer, CSR train.
+- `item_similarity.py` — chỉ số cosine trực tiếp trên ma trận Tag Genome 1.128 chiều
+  (chuẩn hoá z-score rồi L2), dùng cho tab "phim tương tự".
+- `recommender_service.py` — API công khai: `recommend_by_user`, `similar_movies`,
+  `coldstart_items`, `coldstart_movies_for`, `search_movies`, `user_history`.
+
+Hai điểm thiết kế đáng chú ý:
+
+**Mask phim đã xem.** `recommend_by_user` đặt điểm của mọi phim trong lịch sử train
+của user xuống sentinel `-1e9` trước khi lấy top-N, nên kết quả **không bao giờ**
+chứa phim user đã xem — đúng hành vi mà `src/models/seen_item_masking.py` dùng khi
+đánh giá offline. Demo và báo cáo vì vậy nói chung một ngôn ngữ.
+
+**Hai bộ artifact, hai giao thức.** Bộ `demo/artifacts/` fit trên split `full` phục vụ
+tab 1 và tab 2. Bộ `demo/artifacts/coldstart/` fit trên split `coldstart` — nơi mọi
+tương tác train của 1.381 phim held-out đã bị xoá — phục vụ tab 3. Nếu chỉ dùng
+một bộ, tab cold-start sẽ **không chứng minh được** điều gì: ALS đã thấy phim đó
+trong tập `full` và sẽ cho điểm khác 0, làm sai lệch thông điệp cốt lõi.
+
+### 6.6.2 Tab 1 — Gợi ý cho người dùng: CF và CB cạnh tranh trực tiếp
+
+**Hình 6.1** — hai bảng cạnh nhau cho `userId = 72315` (user có lịch sử train dày
+nhất trong tập đánh giá):
+
+![Tab 1 — gợi ý cho người dùng, ALS và BM25 cạnh nhau](../../results/figures/demo/tab1-user-recommendations.png)
+
+Bảng trái là ALS, bảng phải là BM25. Hai danh sách **gần như không trùng nhau**: chỉ
+**1 phim** xuất hiện ở cả hai bên, **9 phim chỉ ALS** và **9 phim chỉ BM25**. Đây là
+hiện thân trực quan của kết luận ở §5.1: CF và CB không học cùng một thứ — CF học
+từ *tương tác*, CB học từ *nội dung*. Với cùng một user, hai họ tìm ra hai tập phim
+khác nhau ở mức gần như bất biến.
+
+Nút "Lịch sử xem gần đây" mở ra 12 phim user đã xem, cho thấy ngay danh sách gợi ý
+**không lặp lại** bất kỳ phim nào trong lịch sử đó.
+
+### 6.6.3 Tab 2 — Phim tương tự kèm lý do giải thích
+
+**Hình 6.2** — tìm "star wars", chọn *Star Wars: Episode IV*, nhận top-10 phim tương tự
+cùng các tag chung:
+
+![Tab 2 — phim tương tự kèm tag chung giải thích](../../results/figures/demo/tab2-similar-movies.png)
+
+Khác với hai tab kia, tab này trả lời câu hỏi khác: **"vì sao phim này được gợi
+ý?"**. Mỗi dòng kèm các tag Tag Genome **chung** giữa phim nguồn và phim được gợi
+ý. Vì sao phải dùng cosine trực tiếp trên Tag Genome chứ không dùng hồ sơ user
+nhân với ma trận nội dung? Vì bước nhân đó trộn tín hiệu của *người dùng* vào
+trong *đặc trưng phim*, và kết quả là các "phim tương tự" rơi về phim generic
+(cùng thể loại, khác chủ đề). Cosine trực tiếp giữ đúng lời giải thích: hai phim
+tương tự vì chúng **chia sẻ tag**.
+
+### 6.6.4 Tab 3 — Cold-start: bằng chứng trực quan cho kết luận cốt lõi
+
+**Hình 6.3** — chọn phim cold-start *Nixon (1995)*, mô hình được fit trên split
+cold-start nên **không hề thấy tương tác nào** của phim này:
+
+![Tab 3 — so sánh ALS và BM25 trên phim cold-start](../../results/figures/demo/tab3-coldstart-comparison.png)
+
+Đây là màn hình quan trọng nhất khi bảo vệ đồ án, vì nó biến kết luận ở §5.3 từ
+một dòng số liệu thành một **phép so sánh nhìn thấy được**:
+
+| | ALS (CF) | BM25 (CB) |
+|---|---|---|
+| Điểm của phim cold-start | **0,000000** | **0,142889** |
+| Thứ hạng trong bảng xếp hạng của user | #4.186 (đáy, hòa) | #371 |
+| Cơ chế | không có tín hiệu để học | dựa vào thể loại + tag của chính phim |
+
+Điểm ALS bằng **đúng 0**, không phải "điểm thấp" — đây là hệ quả toán học: vector
+factor của một item không có tương tác nào bằng 0, nên điểm số cũng bằng 0, và mọi
+phim cold-start khác cũng bằng 0 nên chúng bị xếp hòng ở đáy bảng. BM25 ngược lại
+**không cần ai đã xem phim** để xếp hạng nó, vì nó dựng hồ sơ nội dung trực tiếp từ
+thể loại và tag.
+
+Dòng chữ cuối cùng của tab nói thẳng điều mà §6.5.2 đã nêu: đây **không phải "CF
+kém"** — CF không có gì để học với phim mới. Hệ quả thực tế là hệ thống production
+phải **ghép hai nguồn tín hiệu**: CF cho user có lịch sử dày, content-based cho phim
+mới.
+
+### 6.6.5 Điều demo **không** chứng minh
+
+Nói rõ để tránh overclaim:
+
+- Demo dùng **một** user hiển thị (`72315`) và **một** phim cold-start (`Nixon`) làm ví
+  dụ minh hoạ — nó **không** thay thế bảng số trên 158.774 user ở Chương 5. Số liệu
+  chính thức của đồ án vẫn là `results/final/`.
+- Demo **không** có đăng nhập, **không** lưu trạng thái người dùng, **không** có
+  đề xuất trực tuyến (online re-ranking), và **không** có khả năng phục vụ người dùng
+  mới (user cold-start) — chỉ xử lý được **item cold-start** như §6.6.4.
+- Artifact được sinh từ `data/processed/` nên **không** commit vào git (kích thước
+  lớn, phụ thuộc dữ liệu nguồn); lệnh sinh lại được ghi ở `demo/README.md`.
+- Demo là **ứng dụng một quy trình offline**, không phải hệ thống production.
+
+---
+
 ## Tóm tắt Chương 6
 
 | RQ | Kết luận | Bằng chứng |
@@ -314,3 +429,4 @@ tuyệt đối này — và §6.5.2 nêu lý do.
 | *(bổ sung)* | Tín hiệu quan trọng là **có tương tác hay không**, không phải mức độ hài lòng | §6.3 |
 | *(bổ sung)* | Coverage **đảo ngược** với độ chính xác; Gini đi cùng hướng ngược | §6.4 |
 | *(bổ sung)* | Kết luận chống rò rỉ **có giới hạn** — nêu tường minh ở §6.5.2 | §6.5.2 |
+| *(bổ sung)* | Demo Streamlit 3 tab chứng minh lại: ALS = 0,000000 / BM25 = 0,142889 (hạng #371) trên phim cold-start | §6.6 |

@@ -20,3 +20,6 @@ results/*
 !results/figures/
 results/final/*
 !results/final/*.csv
+
+# Artifact demo: sinh lại bằng `scripts/save_demo_artifacts.py` (~230 MB)
+demo/artifacts/

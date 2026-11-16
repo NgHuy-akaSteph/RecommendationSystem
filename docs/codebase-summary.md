@@ -46,13 +46,16 @@ RecommendationSystem/
 │   ├── paths.py                 đường dẫn + hằng số dùng chung (SEED, ngưỡng relevant)
 │   ├── data/                    tiền xử lý dữ liệu (5 module)
 │   ├── models/                  9 lớp mô hình + scorer dùng chung (20 module)
+│   ├── api/                     tầng serving: artifact, service, chỉ số tương tự (3 module)
 │   └── eval/                    evaluator + phân tích kết quả (13 module)
 ├── configs/                     159 file YAML mô tả mọi thí nghiệm
 ├── scripts/                     runner + công cụ gom bảng (11 script)
 ├── tests/                       17 file test, 219+ test
+├── demo/                        demo Streamlit 3 tab (tầng UI, không phụ thuộc src/api)
 ├── results/
 │   ├── final/                   27 bảng CSV — **sản phẩm báo cáo**, được commit
-│   ├── figures/                 9 hình PNG — cho chương kết quả
+│   ├── figures/                 10 hình PNG — cho chương kết quả
+│   │   └── demo/                3 ảnh chụp màn hình demo (Chương 6 §6.6)
 │   └── *                       artifact trung gian (~500 MB) — gitignore
 ├── docs/                        tài liệu
 ├── data/raw/ml-25m/             dữ liệu thô (gitignore)

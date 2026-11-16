@@ -9,8 +9,9 @@ Trạng thái các phase của đồ án và việc còn lại.
 ## 1. Mốc tổng thể
 
 **Trạng thái hiện tại:** pipeline đánh giá hoàn chỉnh, kết quả đủ bằng chứng để viết
-báo cáo. Đường chạy duy nhất, 9 mô hình × 3 giao thức, 27 bảng + 9 hình trong
-`results/final/` và `results/figures/`, 219+ test xanh.
+báo cáo. Đường chạy duy nhất, 9 mô hình × 3 giao thức, 27 bảng + 10 hình trong
+`results/final/` và `results/figures/`, 288+ test xanh. **Demo Streamlit đã chạy
+được** (`demo/`) — 3 tab: gợi ý theo user, phim tương tự có lý do, cold-start.
 
 | Hạng mục | Trạng thái |
 |---|---|
@@ -22,7 +23,7 @@ báo cáo. Đường chạy duy nhất, 9 mô hình × 3 giao thức, 27 bảng 
 | Chỉ số ngoài độ chính xác + phân tầng kỷ nguyên | ✅ Hoàn tất |
 | Sweep tham số (159 config, đã chạy đủ) | ✅ Hoàn tất |
 | Dọn code legacy + tài liệu | 🔄 Đang làm |
-| Báo cáo | 🔄 Đang làm (Chương 5–6 xong) |
+| Báo cáo | ✅ Hoàn tất (9 chương + abstract + phụ lục) |
 
 ---
 
@@ -41,7 +42,8 @@ Nguồn chi tiết: `plans/261113-2106-unify-recsys-and-recommendation-cb/`.
 | 04b | Viết tài liệu kiến trúc + cập nhật docs so sánh | ✅ Complete | 2026-11-14 |
 | 04c | Rà soát README mô tả đúng một đường chạy | ✅ Complete | 2026-11-14 |
 | 05 | Sửa sai lệch số liệu + commit bằng chứng sweep | ✅ Complete | 2026-11-14 |
-| 06 | Viết báo cáo | 🔄 Đang làm | 2026-11-15 |
+| 06 | Viết báo cáo | ✅ Complete (9 chương + abstract + phụ lục) | 2026-11-15 |
+| 07 | Tầng serving + demo Streamlit (`src/api/`, `demo/`) | ✅ Complete | 2026-11-15 |
 
 ---
 
@@ -77,6 +79,33 @@ Nguồn chi tiết: `plans/261113-2106-unify-recsys-and-recommendation-cb/`.
 | 38 metrics CSV thiếu `split_id`/`catalog_id` | Chạy lại 7 config có trong bảng ablation, sinh lại bảng |
 | Thiếu 3 file docs theo chuẩn dự án | Viết `codebase-summary.md`, `system-architecture.md`, `development-roadmap.md` |
 | Runner thiếu CB-4 | Thêm `best-cb4-hybrid-content.yaml` vào `CONFIGS` + test chặn tách lệch |
+
+### Phase 07: tầng serving + demo Streamlit
+
+| Vấn đề | Cách sửa |
+|---|---|
+| Mô hình trả `item_idx` thô, không có `movieId`/title | Thêm `src/api/recommender_service.py` — ánh xạ `userId`/`movieId` ra metadata |
+| Demo phải fit lại mỗi lần mở (~33s) | `src/api/model_artifacts.py` lưu/nạp artifact (`factors.npz` cho CF, `state.pkl` cho CB) → mở trong ~1,6s |
+| User lạ / user mới làm crash | Fallback sang MostPop kèm nhãn lý do |
+| Gợi ý trả lại phim user đã xem | Tái dùng `mask_seen_items` — sentinel `-1e9` |
+| Gợi ý "phim tương tự" bị nhiễu (dùng profile scorer) | `src/api/item_similarity.py` — cosine trực tiếp trên Tag Genome |
+| Demo CF dùng nhầm mô hình fit trên split `full` | Sinh bộ artifact riêng cho split cold-start (`--split coldstart`) |
+
+Kết quả: 3 tab chạy thật, tab cold-start đo được ALS = **0,000000** với phim held-out
+trong khi BM25 xếp hạng được (thứ hạng #371 thay vì #4.186 đáy bảng).
+
+### Phase 06: viết báo cáo (đóng gói Markdown)
+
+| Vấn đề | Cách sửa |
+|---|---|
+| Còn 6 chương + abstract + phụ lục | Viết đủ 9 file trong `docs/report/` theo khung `notes/report-structure.md` |
+| Số trong báo cáo có thể "trôi" so với CSV | `scripts/check_report_numbers.py` mở rộng quét **cả 10 file** báo cáo (trước chỉ 2) |
+| CSV ghi số lớn bằng dấu phân cách nghìn (`162,540`) | Checker nhận diện giá trị gốc thay vì hiểu là số thập phân |
+| Phụ lục 144 dòng dễ chép tay sai | `scripts/build_report_appendix.py` **sinh tự động** từ `results/final/*.csv` |
+| Demo cần minh hoạ trong báo cáo | Thêm §6.6 với 3 ảnh chụp màn hình trong `results/figures/demo/` |
+
+Kết quả: `check_report_numbers.py` → **0 lệch** trên 28.028 giá trị / 27 bảng CSV;
+`pytest tests/` → **289 test xanh**.
 
 ---
 
@@ -116,10 +145,10 @@ Nguồn chi tiết: `plans/261113-2106-unify-recsys-and-recommendation-cb/`.
 
 | Việc | Ghi chú |
 |---|---|
-| Viết báo cáo | Khung đã viết lại cho 25M / 9 mô hình ở `notes/report-structure.md`. **Chương 5–6 đã có prose** ở `docs/report/` (xem `docs/report/README.md` làm mục lục). Còn lại: Chương 1–4, 7, 8 |
+| Viết báo cáo | **Đã xong** — 9 chương + abstract + phụ lục trong `docs/report/` (mục lục: `docs/report/README.md`) |
 | Nêu rõ giới hạn metadata hậu kỳ | Bắt buộc theo điều kiện của phase 00 — **đã viết** ở Chương 6 §6.1 và mục giới hạn §6.5.2 |
 | Nêu rõ `pop_prior` giết cold-start | Bảng chính lấy bản content thuần; **đã giải thích** ở Chương 5 §5.3.2 |
-| Nêu rõ BPR `num_threads=1` | Số trong bảng là số tái lập được — cần viết ở Chương 2 §2.2.5 / Chương 4 |
+| Nêu rõ BPR `num_threads=1` | Số trong bảng là số tái lập được — **đã viết** ở Chương 4 §4.5 và Chương 2 §2.2.5 |
 
 ### 5.2 Tùy chọn (nếu còn thời gian)
 
@@ -131,12 +160,17 @@ Nguồn chi tiết: `plans/261113-2106-unify-recsys-and-recommendation-cb/`.
 
 ### 5.3 Ngoài phạm vi (đã chốt)
 
-- Demo Streamlit / deploy thật
+- Deploy thật (demo chạy local, không có server công khai)
 - Báo cáo DOCX (chỉ Markdown)
 - Mô hình hybrid CF+CB (late fusion hai nhóm)
 - Bảng no-leak (mất 66% tập user)
 - Biến thể "giới hạn số tag/phim" của CB-1
 - Kiểm định Mann-Whitney giữa các tầng thời kỳ
+
+> **Cập nhật 2026-11-15:** "Demo Streamlit" **đã làm** (Phase 07) và chuyển khỏi
+> danh sách ngoài phạm vi. Demo dùng 2 trong 9 mô hình (ALS + BM25), 3 tab; xem
+> [`demo/README.md`](../demo/README.md). Vẫn **không** làm deploy thật, API HTTP
+> công khai, hay đăng nhập người dùng.
 
 ---
 

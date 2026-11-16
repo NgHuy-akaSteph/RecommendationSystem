@@ -11,3 +11,4 @@ PyYAML
 threadpoolctl
 tqdm
 tabulate
+streamlit>=1.40

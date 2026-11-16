@@ -35,10 +35,19 @@ from src.eval import sweep_spread                       # noqa: E402
 
 REPORT_DIR = paths.ROOT / "docs" / "report"
 
-# File báo cáo được kiểm tra
+# File báo cáo được kiểm tra — toàn bộ các chương trong `docs/report/`.
+# `README.md` bị loại có chủ đích: đó là mục lục, không chứa số liệu.
 REPORT_FILES = [
+    REPORT_DIR / "00-abstract.md",
+    REPORT_DIR / "01-introduction.md",
+    REPORT_DIR / "02-literature-review.md",
+    REPORT_DIR / "03-dataset-and-preprocessing.md",
+    REPORT_DIR / "04-methodology.md",
     REPORT_DIR / "05-experimental-results.md",
     REPORT_DIR / "06-leakage-analysis-and-discussion.md",
+    REPORT_DIR / "07-discussion.md",
+    REPORT_DIR / "08-conclusion.md",
+    REPORT_DIR / "09-appendix.md",
 ]
 
 # Độ chính xác dùng để định dạng giá trị CSV (số thập phân)
@@ -81,6 +90,12 @@ def _split_sign(token: str) -> tuple[str, str]:
 EXEMPT: dict[str, str] = {
     "64,128": "tập giá trị tham số {64,128}, không phải metric",
     "0,87": "viết tắt '~0,87' cho 0,8674 (tỷ lệ hoà)",
+    "76,7": "tỷ lệ ô genome bị xoá khi threshold áp sau z-score (§4.4.3) — "
+            "thống kê đặc thù tiền xử lý, không phải metric đánh giá",
+    "34,6": "số cũ bị loại ('4.587 user / ×34,6') được dẫn lại để chứng minh "
+            "không tái lập được (§7.3) — không phải kết quả hiện hành",
+    "0,142889": "điểm BM25 của một phim cold-start cụ thể, đọc trực tiếp từ demo "
+                "Streamlit tab 3 (§6.6.4) — không phải metric tổng hợp trong CSV",
 }
 
 
@@ -185,6 +200,9 @@ def _collect_allowed(final_dir: Path) -> set[str]:
                     # Dạng phần trăm: 0,149392 → "14,94"
                     allowed.add(_format_vn(value * 100, decimals))
                     allowed.add(_format_vn(abs(value) * 100, decimals))
+                # CSV có thể ghi số lớn bằng dấu phân cách nghìn: "162,540" = 162540.
+                # Báo cáo cũng dùng đúng dạng này, nên phải cho phép giá trị gốc.
+                allowed.add(text)
     return allowed
 
 

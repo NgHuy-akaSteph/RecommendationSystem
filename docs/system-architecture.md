@@ -36,7 +36,27 @@ flowchart TD
     buckets --> final
     leakage --> final
     final --> fig["src.eval.make_result_figures<br/>results/figures/*.png"]
+
+    runner --> saveart["scripts.save_demo_artifacts<br/>fit một lần → artifact"]
+    saveart --> api["src.api.model_artifacts<br/>factors.npz / state.pkl / train_csr.npz"]
+    api --> service["src.api.recommender_service<br/>recommend_by_user / similar / coldstart"]
+    processed["data/processed/<br/>item_meta / user_map / item_genome"] --> service
+    service --> demo["demo.app (Streamlit)<br/>3 tab"]
+    service --> demoimg["results/figures/demo/*.png<br/>ảnh chụp cho Chương 6"]
 ```
+
+### 1.1 Hai đường chạy độc lập
+
+Sơ đồ trên có **hai nhánh tách biệt** từ cùng một tập mô hình:
+
+| Nhánh | Mục đích | Đọc nhãn test? | Artifact |
+|---|---|---|---|
+| **Offline** (`src.eval.*`) | Chấm điểm, sinh `results/final/` | ✅ Có | `*_topk.npy`, `*_peruser.npz` |
+| **Serving** (`src.api.*` → `demo/`) | Trả gợi ý cho người dùng | ❌ **Không** | `demo/artifacts/` |
+
+Ranh giới này được cài bằng **cấu trúc**: `src/api/` **không import `src.eval.*`**, và
+`src.api.model_artifacts` chỉ nhận `TrainData` — không có đường nào để lấy nhãn test.
+Nhờ vậy demo dùng **đúng mô hình** đã chạy trong báo cáo mà vẫn không thể rò rỉ.
 
 ---
 

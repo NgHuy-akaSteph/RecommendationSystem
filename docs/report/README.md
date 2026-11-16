@@ -1,7 +1,6 @@
 # Báo cáo đồ án — Recommendation System (MovieLens 25M)
 
-> **Trạng thái:** Chương 5–6 đã viết. Chương 1–4, 7, 8 chưa viết (xem
-> [`notes/report-structure.md`](../../notes/report-structure.md) — khung đầy đủ).
+> **Trạng thái:** Đủ 9 chương + phụ lục (Markdown). Mục lục bên dưới là điểm vào.
 >
 > **Nguồn sự thật duy nhất:** mọi số liệu trong báo cáo lấy từ `results/final/*.csv`
 > và `results/figures/*.png` đã commit trong repo. Không chép tay số — script
@@ -13,15 +12,19 @@
 
 | Chương | File | Trạng thái | Nguồn dữ liệu chính |
 |---|---|---|---|
-| 1. Introduction | — | ⬜ Chưa viết | — |
-| 2. Literature Review | — | ⬜ Chưa viết | — |
-| 3. Dataset & Preprocessing | — | ⬜ Chưa viết | `dataset-summary.csv` |
-| 4. Methodology | — | ⬜ Chưa viết | — |
+| Abstract | [`00-abstract.md`](00-abstract.md) | ✅ Đã viết | tổng hợp toàn báo cáo |
+| 1. Introduction | [`01-introduction.md`](01-introduction.md) | ✅ Đã viết | — |
+| 2. Literature Review | [`02-literature-review.md`](02-literature-review.md) | ✅ Đã viết | — |
+| 3. Dataset & Preprocessing | [`03-dataset-and-preprocessing.md`](03-dataset-and-preprocessing.md) | ✅ Đã viết | `dataset-summary.csv` |
+| 4. Methodology | [`04-methodology.md`](04-methodology.md) | ✅ Đã viết | — |
 | **5. Experimental Results** | [`05-experimental-results.md`](05-experimental-results.md) | ✅ Đã viết | `benchmark-*.csv`, `ablation-*.csv`, `bootstrap-ci.csv`, `wilcoxon-*.csv` |
 | **6. Phân tích chống rò rỉ & tranh luận** | [`06-leakage-analysis-and-discussion.md`](06-leakage-analysis-and-discussion.md) | ✅ Đã viết | `tag-leakage-*.csv`, `weight-mode-*.csv`, `beyond-accuracy-*.csv` |
-| 7. Discussion | — | ⬜ Chưa viết | — |
-| 8. Conclusion & Future Work | — | ⬜ Chưa viết | — |
-| Phụ lục | — | ⬜ Chưa viết | `ablation-*.csv` (144 dòng) |
+| 7. Discussion | [`07-discussion.md`](07-discussion.md) | ✅ Đã viết | tổng hợp §5–6 |
+| 8. Conclusion & Future Work | [`08-conclusion.md`](08-conclusion.md) | ✅ Đã viết | tổng hợp toàn báo cáo |
+| Phụ lục | [`09-appendix.md`](09-appendix.md) | ✅ Đã viết (sinh tự động) | `ablation-*.csv` (144 dòng) |
+
+> Phụ lục được **sinh tự động** bằng `venv/bin/python scripts/build_report_appendix.py`
+> từ `results/final/*.csv` — không chép tay số.
 
 ## 2. Quy ước bất di bất dịch
 

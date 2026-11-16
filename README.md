@@ -2,6 +2,18 @@
 
 Hệ thống gợi ý trên MovieLens 25M. Tài liệu đặt trong `notes/` và `docs/`.
 
+## 🎬 Demo
+
+```bash
+venv/bin/python scripts/save_demo_artifacts.py                        # sinh artifact (~80s)
+venv/bin/python scripts/save_demo_artifacts.py --split coldstart      # artifact cold-start
+venv/bin/streamlit run demo/app.py
+```
+
+3 tab: **gợi ý theo người dùng** (ALS vs BM25), **phim tương tự** (có lý do bằng tag
+genome), **cold-start** (ALS = 0,000000 với phim chưa có ai xem, CB vẫn xếp hạng được).
+Chi tiết: [`demo/README.md`](demo/README.md).
+
 ## Pipeline chính (đường chạy duy nhất)
 
 Dữ liệu thô: `data/raw/ml-25m/` (không commit). Đường chạy mới đã hợp nhất content-based +
@@ -30,7 +42,9 @@ venv/bin/python -m pytest tests/
 |---|---|---|
 | `src/`, `tests/`, `scripts/`, `configs/`, `docs/` | ✅ Có | mã nguồn và 159 config YAML |
 | `results/final/*.csv` (27 bảng) | ✅ Có | **bảng báo cáo cuối** — người clone repo xem được ngay |
-| `results/figures/*.png` (9 hình) | ✅ Có | hình cho chương kết quả |
+| `results/figures/*.png` (10 hình) | ✅ Có | hình cho chương kết quả |
+| `results/figures/demo/*.png` (3 ảnh) | ✅ Có | ảnh chụp màn hình demo cho Chương 6 §6.6 |
+| `demo/artifacts/` (~230 MB) | ❌ Không | sinh lại bằng `scripts/save_demo_artifacts.py`; gitignore |
 | `results/*_topk.npy`, `results/*_peruser.npz`, `results/*_metrics.csv` | ❌ Không | artifact sinh tự động, **~500 MB**; gitignore |
 | `data/` (raw + cache) | ❌ Không | sinh lại bằng 3 bước tiền xử lý ở trên |
 | `notes/`, `plans/` | ❌ Không | ghi chú nội bộ, không track |

@@ -5,6 +5,93 @@ thay đổi và cách kiểm chứng.
 
 ---
 
+## 2026-11-15 — Demo Streamlit 3 tab + đóng gói báo cáo Markdown đủ 9 chương
+
+**Phạm vi:** Thêm tầng phục vụ (`src/api/`) và demo Streamlit 3 tab (`demo/`), viết
+nốt toàn bộ chương báo cáo còn thiếu, sinh phụ lục tự động, và mở rộng hàng rào
+kiểm chứng số liệu cho **cả 10 file** báo cáo. Không đổi thuật toán, không chạy lại
+sweep, không sửa `results/final/`.
+
+### Tầng serving mới (`src/api/`)
+
+| File | Vai trò |
+|---|---|
+| `model_artifacts.py` | Lưu/nạp artifact: factor matrix CF (`factors.npz`), trạng thái scorer CB (`state.pkl`), CSR train (`train_csr.npz`) |
+| `item_similarity.py` | Chỉ số cosine trực tiếp trên Tag Genome 1.128 chiều (threshold → z-score → L2) |
+| `recommender_service.py` | API công khai: `recommend_by_user`, `similar_movies`, `coldstart_items`, `coldstart_movies_for`, `search_movies`, `user_history` |
+
+Ranh giới kiến trúc quan trọng: **`src/api/` không import `src.eval.*`** — evaluator
+chỉ dùng offline, serving không được chạm nhãn test.
+
+### Demo Streamlit (`demo/`) — 3 tab
+
+| Tab | Nội dung |
+|---|---|
+| 1. Người dùng | `userId` → 2 cột ALS \| BM25, đếm phim trùng/chỉ-một-bên |
+| 2. Phim tương tự | Search title → top-10 phim tương tự + tag Tag Genome chung (lý do giải thích) |
+| 3. Cold-start | Chọn 1 trong 1.381 phim held-out → ALS vs BM25 trên cùng phim |
+
+Hai quyết định thiết kế đã sửa các lỗi ban đầu:
+
+- **Demo fit lại mỗi lần mở (~33s)** → lưu artifact, mở trong **~1,6s**.
+- **Tab cold-start dùng nhầm artifact split `full`** → sinh bộ artifact thứ hai bằng
+  `--split coldstart`. Nếu không, ALS đã học tương tác của phim held-out và cho
+  điểm khác 0, làm sai lệch thông điệp cốt lõi.
+
+Kết quả đo được: tab cold-start cho ALS = **0,000000** (hạng #4.186, đáy bảng, hòa)
+trong khi BM25 = **0,142889** (hạng #371).
+
+### Báo cáo — viết nốt 6 chương + abstract + phụ lục
+
+| File | Nội dung |
+|---|---|
+| `docs/report/00-abstract.md` | Abstract có cấu trúc, 4 khối |
+| `docs/report/01-introduction.md` | Đặt vấn đề xếp hạng, RQ1–RQ3, 6 đóng góp |
+| `docs/report/02-literature-review.md` | CF, CB, metric xếp hạng, metric ngoài độ chính xác, kiểm định |
+| `docs/report/03-dataset-and-preprocessing.md` | ML-25M, EDA, lọc catalog, split thời gian per-user |
+| `docs/report/04-methodology.md` | Baseline, CB-1…CB-4, ALS, 3 giao thức đánh giá |
+| `docs/report/07-discussion.md` | Tổng hợp 4 phát hiện, đánh đổi CF/CB, hạn chế |
+| `docs/report/08-conclusion.md` | 5 đóng góp + hướng tương lai |
+| `docs/report/09-appendix.md` | **Sinh tự động** bởi `scripts/build_report_appendix.py` |
+
+Thêm §6.6 mô tả demo kèm **3 ảnh chụp màn hình** trong `results/figures/demo/`.
+
+### Hàng rào kiểm chứng số liệu được mở rộng
+
+`scripts/check_report_numbers.py` trước đây chỉ quét 2 file (Chương 5–6). Nay quét
+**cả 10 file** báo cáo, và:
+
+- Nhận diện số lớn ghi bằng dấu phân cách nghìn trong CSV (`162,540`) — trước đây bị
+  hiểu nhầm là số thập phân 162,540 nên báo lệch.
+- Bổ sung `EXEMPT` có lý do rõ ràng cho các số **không** đến từ CSV: `76,7` (thống
+  kê thứ tự threshold trong tiền xử lý), `34,6` (số cũ bị loại được dẫn lại để chứng
+  minh không tái lập được), `0,142889` (điểm BM25 đọc trực tiếp từ demo).
+
+### Vá lỗi test
+
+`tests/test_demo_service.py` — fixture chưa sinh bộ artifact `coldstart/` nên test
+so sánh cold-start luôn rơi vào nhánh `available: False`. Đã bổ sung fixture với hai
+scorer mô phỏng đúng ngữ nghĩa thật (CF → điểm 0 cho item held-out; CB → điểm > 0),
+và thêm test khẳng định **ALS = 0 / CB vào top-N**.
+
+### Kiểm chứng
+
+| Hạng mục | Kết quả |
+|---|---|
+| `venv/bin/python scripts/check_report_numbers.py` | **0 lệch** — 10 file báo cáo, 28.028 giá trị từ 27 bảng CSV |
+| `venv/bin/python -m pytest tests/ -q` | **289 passed** (trước: 272) |
+| `streamlit run demo/app.py` | Mở trong ~1,6s từ artifact; cả 3 tab chạy, đã kiểm chứng bằng trình duyệt |
+
+### Ghi chú
+
+- `demo/artifacts/` (~230 MB) **không** commit — `.gitignore` ghi rõ; lệnh sinh lại ở
+  `demo/README.md`.
+- `notes/report-structure.md` đã được track từ trước (10 file trong `notes/` tồn tại
+  dù `notes/` nằm trong `.gitignore`) → giữ nguyên, không cần commit thêm.
+- Chưa đẩy commit lên `origin/v1`.
+
+---
+
 ## 2026-11-15 — Hướng dẫn chạy giao thức `full` + sinh lại bảng `dev` bị cũ
 
 **Phạm vi:** Viết tài liệu hướng dẫn chạy giao thức `full` (158.774 user) thay cho `dev`
