@@ -5,6 +5,51 @@ thay đổi và cách kiểm chứng.
 
 ---
 
+## 2026-11-24 — Gộp báo cáo còn 5 chương + vá lỗ hổng checker số dấu chấm
+
+**Phạm vi:** Tái cấu trúc báo cáo từ 8 chương xuống **5 chương**, đánh số lại toàn bộ
+mục và cross-reference; vá hàng rào `check_report_numbers.py` để kiểm tra được số
+viết bằng **dấu chấm** (trước đó toàn bộ số dạng này đi qua checker mà không hề
+được kiểm tra). Không đổi thuật toán, không chạy lại sweep.
+
+### Đóng hai lỗ hổng thực nghiệm
+
+| Việc | Kết quả |
+|---|---|
+| Phép đo sampled LOO vs full ranking | Kendall τ = 0,908 (`p = 4,81e-05`) trên 12 mô hình tốt nhất — `results/final/sampled-vs-full.csv` |
+| Wilcoxon chéo CF↔CB (ALS vs 4 mô hình CB) | ALS thắng cả 4, `p < 1e-300` — `results/final/wilcoxon-cross-cf-cb.csv` |
+
+Hai kết quả này **đóng** hai hạn chế mà báo cáo từng tự nêu ở §1.4 (giới hạn) và
+§5.8 (hướng phát triển).
+
+### Cấu trúc mới
+
+| Chương | File | Gộp từ |
+|---|---|---|
+| 1 — Giới thiệu | `01-introduction.md` | — |
+| 2 — Tổng quan và cơ sở lý thuyết | `02-literature-review.md` | — |
+| 3 — Dữ liệu, tiền xử lý và phương pháp | `03-dataset-and-methodology.md` | Chương 3 + Chương 4 cũ |
+| 4 — Kết quả thực nghiệm và phân tích | `04-results-and-analysis.md` | Chương 5 + Chương 6 cũ |
+| 5 — Thảo luận và kết luận | `05-discussion-and-conclusion.md` | Chương 7 + Chương 8 cũ |
+| Phụ lục | `09-appendix.md` | sinh tự động |
+
+### Hàng rào mới
+
+| File | Vai trò |
+|---|---|
+| `scripts/restructure_report_to_5_chapters.py` | Gộp file, đánh số lại heading và cross-reference bằng script (sửa tay dễ sót) |
+| `scripts/check_report_crossrefs.py` | Kiểm tra mọi `§x.y` trỏ tới mục **thực sự tồn tại** — lỗ *âm* mà checker số liệu không bắt được |
+| `scripts/check_report_numbers.py` | Thêm `DOT_NUMBER_RE` + `_dot_variants()`: số dạng `158.774` / `0.1375` nay **được** kiểm tra |
+
+### Kiểm chứng (2026-11-24)
+
+| Hạng mục | Kết quả |
+|---|---|
+| `venv/bin/python scripts/check_report_numbers.py` | **0 lệch** — 7 file báo cáo, 28.657 giá trị từ 31 bảng CSV |
+| `venv/bin/python scripts/check_report_crossrefs.py` | **0 cross-reference hỏng** — 120 mục trong 8 file báo cáo |
+| `venv/bin/python scripts/build_report_appendix.py` | Sinh lại phụ lục (215 dòng) không lỗi |
+| `venv/bin/python -m pytest tests/ -q` | **290 passed** (trước: 289) |
+
 ## 2026-11-15 — Demo Streamlit 3 tab + đóng gói báo cáo Markdown đủ 9 chương
 
 **Phạm vi:** Thêm tầng phục vụ (`src/api/`) và demo Streamlit 3 tab (`demo/`), viết

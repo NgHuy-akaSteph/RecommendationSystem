@@ -19,10 +19,10 @@ from src.eval import sweep_spread
 
 REPORT_DIR = paths.ROOT / "docs" / "report"
 OUTLINE = paths.ROOT / "notes" / "report-structure.md"
-CH5 = REPORT_DIR / "05-experimental-results.md"
+CH4 = REPORT_DIR / "04-results-and-analysis.md"
 
 # Tài liệu được phép nêu biên độ sweep
-SPREAD_DOCS = [OUTLINE, CH5]
+SPREAD_DOCS = [OUTLINE, CH4]
 
 TOLERANCE = 0.01  # điểm %
 

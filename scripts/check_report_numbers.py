@@ -41,17 +41,28 @@ REPORT_FILES = [
     REPORT_DIR / "00-abstract.md",
     REPORT_DIR / "01-introduction.md",
     REPORT_DIR / "02-literature-review.md",
-    REPORT_DIR / "03-dataset-and-preprocessing.md",
-    REPORT_DIR / "04-methodology.md",
-    REPORT_DIR / "05-experimental-results.md",
-    REPORT_DIR / "06-leakage-analysis-and-discussion.md",
-    REPORT_DIR / "07-discussion.md",
-    REPORT_DIR / "08-conclusion.md",
+    REPORT_DIR / "03-dataset-and-methodology.md",
+    REPORT_DIR / "04-results-and-analysis.md",
+    REPORT_DIR / "05-discussion-and-conclusion.md",
     REPORT_DIR / "09-appendix.md",
 ]
 
 # Độ chính xác dùng để định dạng giá trị CSV (số thập phân)
 PRECISIONS = (1, 2, 3, 4, 5, 6)
+
+# File **dữ liệu gốc** của MovieLens 25M — số dòng các file này được nêu ở §3.1.1
+# nhưng không nằm trong `results/final/`. Checker đọc trực tiếp để đối chiếu
+# (không hard-code) — file nằm trong `data/` (gitignore) nên nếu thiếu thì bỏ qua.
+#
+# Lưu ý: đếm dòng bằng số byte, trừ dòng header — chính xác với CSV không có
+# dấu nháy kép nhúng newline.
+RAW_MOVIELENS_FILES = {
+    "ratings.csv": "Số dòng ratings.csv (hành vi xem phim)",
+    "movies.csv": "Số dòng movies.csv (siêu dữ liệu phim)",
+    "tags.csv": "Số dòng tags.csv (tag người dùng tự gán)",
+    "genome-scores.csv": "Số dòng genome-scores.csv (điểm liên quan Tag Genome)",
+    "genome-tags.csv": "Số dòng genome-tags.csv (tên tag trong genome)",
+}
 
 # Mẫu token số kiểu Việt: `0,1375`, `23,3`, `−0,6` (dấu trừ Unicode hoặc ASCII)
 #
@@ -83,6 +94,60 @@ def _split_sign(token: str) -> tuple[str, str]:
         return "+", token[1:]
     return "", token
 
+
+# Mẫu số dùng **dấu chấm** — báo cáo dùng song song hai quy ước:
+#   • dấu phẩy = thập phân   → `0,1375`  (quét bởi NUMBER_RE)
+#   • dấu chấm  = phân cách nghìn → `158.774`
+#
+# Lý do cần mẫu này: `NUMBER_RE` chỉ khớp `\d+,\d{1,6}` nên **bỏ sót toàn bộ**
+# số viết bằng dấu chấm — trong đó có những số quan trọng (số dòng dataset gốc,
+# số phim, hạng trong demo). Trước khi có mẫu này, checker báo "0 lệch" cho cả
+# những chỗ sai — hàng rào không trong suốt.
+#
+# Ràng buộc: phải có ít nhất một chữ số trước dấu chấm, để không khớp tham chiếu
+# mục như `§5.2`.
+DOT_NUMBER_RE = re.compile(
+    r"(?<![\d,.])([−\-]?\d{1,3}(?:\.\d{3})+(?![\d,.])|[−\-]?\d+\.\d{1,6}(?![\d,.]))"
+)
+
+
+def _dot_variants(token: str) -> set[str]:
+    """Các cách viết tương đương của một token dùng dấu chấm.
+
+    Với `158.774` có **hai** cách hiểu: phân cách nghìn (= 158774) hoặc thập phân
+    (= 158.774). Với `0.1375` chỉ có một cách hiểu hợp lý (thập phân). Script thử
+    cả hai và chấp nhận nếu **một** cách khớp — vì mục tiêu là phát hiện số sai,
+    không phải phán xét quy ước trình bày.
+
+    Args:
+        token: token thô bắt được từ `DOT_NUMBER_RE`.
+
+    Returns:
+        Tập các biến thể có thể khớp với giá trị trong `results/final/`.
+    """
+    normalized = _normalize_sign(token)
+    sign, magnitude = _split_sign(normalized)
+    variants: set[str] = set()
+
+    if "." in magnitude:
+        # Cách hiểu 1 — thập phân: "0.1375" -> 0,1375
+        try:
+            variants.add(_format_vn(float(magnitude), 6))
+        except ValueError:
+            pass
+        # Cách hiểu 2 — phân cách nghìn: "13.816" -> 13816
+        variants.add(magnitude.replace(".", ""))
+        variants.add(magnitude.replace(".", ","))
+        # Giữ nguyên token gốc (dạng dấu chấm) để khớp với EXEMPT
+        variants.add(magnitude)
+    else:
+        variants.add(magnitude)
+
+    # Giữ dấu trong biến thể có dấu
+    if sign == "-":
+        variants = {f"-{v}" for v in variants} | variants
+    return variants
+
 # Số trong báo cáo không phải metric — cần nêu rõ lý do để được miễn trừ.
 #
 # Mỗi mục là (giá trị, lý do). Chỉ miễn trừ đúng giá trị đó, không miễn trừ cả lớp —
@@ -96,11 +161,38 @@ EXEMPT: dict[str, str] = {
             "không tái lập được (§7.3) — không phải kết quả hiện hành",
     "0,142889": "điểm BM25 của một phim cold-start cụ thể, đọc trực tiếp từ demo "
                 "Streamlit tab 3 (§6.6.4) — không phải metric tổng hợp trong CSV",
+    "4.587": "số cũ bị loại ('4.587 user') được dẫn lại để chứng minh không tái "
+             "lập được (§7.3) — không phải kết quả hiện hành",
+    # EXEMPT ở dạng **dấu chấm** vì `_dot_variants` sinh ra cả hai dạng.
+    "13816": "số phim còn lại sau lọc catalog (13.816) — đọc từ tên catalog_id",
 }
 
 
 def _format_vn(value: float, decimals: int) -> str:
     return f"{value:.{decimals}f}".replace(".", ",")
+
+
+def _raw_movielens_counts() -> dict[str, str]:
+    """Số dòng thực tế của các file MovieLens gốc.
+
+    Đọc trực tiếp từ `data/raw/ml-25m/` thay vì hard-code — nếu dataset đổi,
+    checker báo lệch thay vì im lặng chấp nhận con số cũ.
+
+    Returns:
+        Dict `số dòng (dạng chuỗi nguyên)` -> mô tả. Rỗng nếu thiếu dữ liệu.
+    """
+    raw_dir = paths.ROOT / "data" / "raw" / "ml-25m"
+    if not raw_dir.exists():
+        return {}
+    counts: dict[str, str] = {}
+    for name, reason in RAW_MOVIELENS_FILES.items():
+        path = raw_dir / name
+        if not path.exists():
+            continue
+        with path.open("rb") as fh:
+            n_lines = sum(1 for _ in fh) - 1  # trừ dòng header
+        counts[str(n_lines)] = reason
+    return counts
 
 
 def _derived_values() -> dict[str, str]:
@@ -171,6 +263,59 @@ def _derived_values() -> dict[str, str]:
         derived[sweep_spread.format_vn(float(row["chênh_lệch_trung_bình"]), 6)] = \
             f"chênh lệch TB Wilcoxon ({row['Mô hình']})"
 
+    # Số dòng file MovieLens gốc — đọc trực tiếp, không hard-code
+    for count, reason in _raw_movielens_counts().items():
+        derived[count] = reason
+
+    # Số lượng item held-out của giao thức cold-start.
+    #
+    # Đọc từ `paths.ROOT / "data" / "processed"` chứ **không** dùng
+    # `paths.PROCESSED_DIR` — conftest monkeypatch biến `PROCESSED_DIR` sang
+    # `tmp_path`, nên dùng `PROCESSED_DIR` sẽ không tìm thấy file và im lặng
+    # bỏ qua số này (hàng rào mất tác dụng trong test).
+    heldout = (paths.ROOT / "data" / "processed" / "coldstart"
+               / "heldout_items.npy")
+    if heldout.exists():
+        import numpy as np
+        n_heldout = int(np.load(heldout).shape[0])
+        derived[str(n_heldout)] = "số phim held-out của giao thức cold-start"
+
+    # Bảng so sánh các cách chia tập (§3.3.3) — tái lập được, đọc từ CSV
+    split_cmp = paths.FINAL_DIR / "split-comparison.csv"
+    if split_cmp.exists():
+        df_split = pd.read_csv(split_cmp)
+        for col in df_split.columns:
+            if df_split[col].dtype.kind not in "if":
+                continue
+            for raw in df_split[col].dropna():
+                for decimals in PRECISIONS:
+                    derived[sweep_spread.format_vn(float(raw), decimals)] = \
+                        "số user theo cách chia tập (§3.3.3)"
+
+    # Số hạng của phim cold-start trong demo (§4.11.4) — đọc từ CSV
+    demo = paths.FINAL_DIR / "demo-coldstart-comparison.csv"
+    if demo.exists():
+        df_demo = pd.read_csv(demo)
+        for col in df_demo.columns:
+            if df_demo[col].dtype.kind not in "if":
+                continue
+            for raw in df_demo[col].dropna():
+                for decimals in PRECISIONS:
+                    derived[sweep_spread.format_vn(float(raw), decimals)] = \
+                        "số liệu demo cold-start"
+
+    # Kết quả so sánh giao thức full-ranking vs sampled LOO (§3.9.3)
+    loo = paths.FINAL_DIR / "sampled-vs-full.csv"
+    if loo.exists():
+        df_loo = pd.read_csv(loo)
+        for col in df_loo.columns:
+            if df_loo[col].dtype.kind not in "if":
+                continue
+            for raw in df_loo[col].dropna():
+                for decimals in PRECISIONS:
+                    derived[sweep_spread.format_vn(float(raw), decimals)] = \
+                        "số liệu so sánh giao thức full vs sampled LOO"
+
     return derived
 
 
@@ -221,6 +366,28 @@ def _mask_scientific(text: str) -> str:
     return SCIENTIFIC_RE.sub(lambda m: " " * len(m.group(0)), text)
 
 
+# Tham chiếu mục dạng `§4.10` — **không phải số liệu**. Phải che trước khi quét
+# số dấu chấm, vì `4.10` trông y hệt một số thập phân.
+SECTION_REF_MASK_RE = re.compile(r"§\d+(?:\.\d+)+")
+
+# Số trong **tiêu đề mục** (`## 4.10 ...`) cũng không phải số liệu — đó là số thứ
+# tự mục, không phải giá trị đo được.
+HEADING_MASK_RE = re.compile(r"^#{1,6}\s+.*$", re.MULTILINE)
+
+
+def _mask_section_refs(text: str) -> str:
+    """Che tham chiếu mục `§x.y` và số trong tiêu đề mục.
+
+    Args:
+        text: nội dung markdown.
+
+    Returns:
+        Nội dung đã che tham chiếu mục và số trong heading.
+    """
+    text = SECTION_REF_MASK_RE.sub(lambda m: " " * len(m.group(0)), text)
+    return HEADING_MASK_RE.sub(lambda m: " " * len(m.group(0)), text)
+
+
 def _scientific_variants(token: str) -> set[str]:
     """Các cách viết khác của một p-value ký hiệu khoa học.
 
@@ -257,6 +424,9 @@ def check(allowed: set[str], derived: dict[str, str],
         # số liệu riêng (xem _mask_scientific).
         text = _mask_scientific(text)
 
+        # Che tham chiếu mục `§4.10` — không phải số liệu (xem _mask_section_refs).
+        dot_text = _mask_section_refs(text)
+
         for match in NUMBER_RE.finditer(text):
             token = match.group(1)
             if token in seen:
@@ -269,6 +439,19 @@ def check(allowed: set[str], derived: dict[str, str],
             if sign in ("", "-") and magnitude in allowed:
                 continue
             if magnitude in allowed or magnitude in derived or magnitude in EXEMPT:
+                continue
+            problems.append((md_path.name, token, "không truy được về results/final/"))
+
+        # Số dùng dấu chấm — `158.774` (nghìn) hoặc `0.1375` (thập phân).
+        # Trước khi có vòng này, toàn bộ số dạng này đi qua checker mà không
+        # hề được kiểm tra.
+        for match in DOT_NUMBER_RE.finditer(dot_text):
+            token = match.group(1)
+            if token in seen:
+                continue
+            seen.add(token)
+            if any(v in allowed or v in derived or v in EXEMPT
+                   for v in _dot_variants(token)):
                 continue
             problems.append((md_path.name, token, "không truy được về results/final/"))
     return problems

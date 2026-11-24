@@ -23,7 +23,7 @@ báo cáo. Đường chạy duy nhất, 9 mô hình × 3 giao thức, 27 bảng 
 | Chỉ số ngoài độ chính xác + phân tầng kỷ nguyên | ✅ Hoàn tất |
 | Sweep tham số (159 config, đã chạy đủ) | ✅ Hoàn tất |
 | Dọn code legacy + tài liệu | 🔄 Đang làm |
-| Báo cáo | ✅ Hoàn tất (9 chương + abstract + phụ lục) |
+| Báo cáo | ✅ Hoàn tất (5 chương + abstract + phụ lục) |
 
 ---
 
@@ -44,6 +44,7 @@ Nguồn chi tiết: `plans/261113-2106-unify-recsys-and-recommendation-cb/`.
 | 05 | Sửa sai lệch số liệu + commit bằng chứng sweep | ✅ Complete | 2026-11-14 |
 | 06 | Viết báo cáo | ✅ Complete (9 chương + abstract + phụ lục) | 2026-11-15 |
 | 07 | Tầng serving + demo Streamlit (`src/api/`, `demo/`) | ✅ Complete | 2026-11-15 |
+| 08 | Gộp báo cáo còn 5 chương + đóng 2 lỗ hổng thực nghiệm | ✅ Complete | 2026-11-24 |
 
 ---
 
@@ -107,6 +108,19 @@ trong khi BM25 xếp hạng được (thứ hạng #371 thay vì #4.186 đáy b�
 Kết quả: `check_report_numbers.py` → **0 lệch** trên 28.028 giá trị / 27 bảng CSV;
 `pytest tests/` → **289 test xanh**.
 
+### Phase 07: gộp báo cáo còn 5 chương + đóng hai lỗ hổng thực nghiệm
+
+| Vấn đề | Cách sửa |
+|---|---|
+| Báo cáo dài 8 chương, khó điều hướng khi trình bày | Gộp còn **5 chương**; đánh số lại mục và cross-reference bằng `scripts/restructure_report_to_5_chapters.py` (sửa tay dễ sót) |
+| Số viết bằng **dấu chấm** (`158.774`) không được checker kiểm tra | Thêm `DOT_NUMBER_RE` + `_dot_variants()` — trước đó toàn bộ số dạng này đi qua checker mà không hề được kiểm tra |
+| Tham chiếu `§x.y` trỏ tới mục không tồn tại | Thêm `scripts/check_report_crossrefs.py` — hàng rào cho thao tác đánh số lại mục |
+| Hai hạn chế tự nêu ở §1.4 chưa có bằng chứng | Chạy **sampled LOO vs full ranking** (Kendall τ = 0,908) và **Wilcoxon chéo CF↔CB** (`p < 1e-300`) |
+| Biên độ `cb1-tfidf` lệch (18 dòng thay vì 15) | `SweepSpread` thêm `best_exp_name`; phụ lục A.1 lấy từ `sweep_spread.spread_by_model()` — một nguồn sự thật |
+
+Kết quả: `check_report_numbers.py` → **0 lệch** trên 28.657 giá trị / 31 bảng CSV;
+`check_report_crossrefs.py` → **0 cross-reference hỏng**; `pytest tests/` xanh.
+
 ---
 
 ## 4. Kết quả đạt được
@@ -145,17 +159,17 @@ Kết quả: `check_report_numbers.py` → **0 lệch** trên 28.028 giá trị 
 
 | Việc | Ghi chú |
 |---|---|
-| Viết báo cáo | **Đã xong** — 9 chương + abstract + phụ lục trong `docs/report/` (mục lục: `docs/report/README.md`) |
-| Nêu rõ giới hạn metadata hậu kỳ | Bắt buộc theo điều kiện của phase 00 — **đã viết** ở Chương 6 §6.1 và mục giới hạn §6.5.2 |
-| Nêu rõ `pop_prior` giết cold-start | Bảng chính lấy bản content thuần; **đã giải thích** ở Chương 5 §5.3.2 |
-| Nêu rõ BPR `num_threads=1` | Số trong bảng là số tái lập được — **đã viết** ở Chương 4 §4.5 và Chương 2 §2.2.5 |
+| Viết báo cáo | **Đã xong** — 5 chương + abstract + phụ lục trong `docs/report/` (mục lục: `docs/report/README.md`) |
+| Nêu rõ giới hạn metadata hậu kỳ | Bắt buộc theo điều kiện của phase 00 — **đã viết** ở §4.6 và mục giới hạn §4.10.2 |
+| Nêu rõ `pop_prior` giết cold-start | Bảng chính lấy bản content thuần; **đã giải thích** ở §4.3.2 |
+| Nêu rõ BPR `num_threads=1` | Số trong bảng là số tái lập được — **đã viết** ở §3.8.3 và §2.2.5 |
 
 ### 5.2 Tùy chọn (nếu còn thời gian)
 
 | Việc | Chi phí | Giá trị |
 |---|---|---|
-| Chạy sampled LOO → Kendall τ | ~20 phút | Biến lựa chọn "full ranking" từ trích dẫn thành **kết quả thực nghiệm** của đồ án. Script **đã sửa** (dedup `exp_name`, đọc metric gốc `results/{exp_name}_metrics.csv`) và **chưa chạy** — cần chạy rồi điền vào Chương 7 §7.4 |
-| Bảng so sánh CF↔CB dùng Wilcoxon chung | Thấp | Hiện Wilcoxon chỉ chạy trong từng bảng — cần bảng riêng vì đây là câu hỏi khác |
+| Chạy sampled LOO → Kendall τ | ~20 phút | ~~Biến lựa chọn "full ranking" từ trích dẫn thành kết quả thực nghiệm~~ **Đã chạy** (2026-11-24): Kendall τ = 0,908 (`p = 4,81e-05`) trên 12 mô hình tốt nhất — `results/final/sampled-vs-full.csv`, §3.9.3 |
+| Bảng so sánh CF↔CB dùng Wilcoxon chung | Thấp | ~~Hiện Wilcoxon chỉ chạy trong từng bảng~~ **Đã chạy** (2026-11-24): ALS thắng cả 4 mô hình CB, `p < 1e-300` — `results/final/wilcoxon-cross-cf-cb.csv`, §4.4.2 |
 | Chạy `full` cho các config còn lại của sweep | Cao (~50 phút) | Chỉ cần nếu muốn bảng sweep ở `full` thay vì `dev` |
 
 ### 5.3 Ngoài phạm vi (đã chốt)

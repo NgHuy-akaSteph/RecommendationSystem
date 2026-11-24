@@ -1,6 +1,6 @@
 # Chương 2 — Tổng quan tài liệu và cơ sở lý thuyết
 
-> **Vai trò:** cung cấp nền tảng lý thuyết cho toàn bộ thí nghiệm ở Chương 4–6.
+> **Vai trò:** cung cấp nền tảng lý thuyết cho toàn bộ thí nghiệm ở Chương 3–4.
 > Chương này **không** trả lời RQ nào — nó định nghĩa các khái niệm mà RQ1–RQ3 sử
 > dụng, và đặc biệt là **metric** (§2.4), vì lựa chọn metric quyết định kết luận.
 >
@@ -148,7 +148,7 @@ thực tế: mỗi bước tối ưu là SGD, nên kết quả phụ thuộc th�
 trình hệ điều hành, nên hai lần chạy cùng seed vẫn cho kết quả khác nhau. Đồ án
 chọn **tái lập được tuyệt đối** trên tốc độ: `fit_s = 39,84` cho 158.774 user ở giao
 thức `full` (nguồn: cột `fit_s` của `results/final/full-summary.csv`) thay vì ~7s khi
-chạy nhiều luồng. Đây là đánh đổi đã ghi nhận, được bàn lại ở §7.3.
+chạy nhiều luồng. Đây là đánh đổi đã ghi nhận, được bàn lại ở §5.3.
 
 ---
 
@@ -205,7 +205,7 @@ nói một chiều:
 - Ở bảng phân tầng theo kỷ nguyên (`tag-leakage-strata.csv`), **CB-2 BM25 dẫn CB-1
   TF-IDF ở cả ba tầng**: 0,0824 / 0,1263 / 0,1094 (BM25) so với 0,0707 / 0,1256 /
   0,1083 (TF-IDF).
-- Ở giao thức `full` (bảng chính Chương 5), BM25 cũng cao hơn: **0,0998 > 0,0937**.
+- Ở giao thức `full` (bảng chính §4.1), BM25 cũng cao hơn: **0,0998 > 0,0937**.
 
 > **Cảnh báo đọc nhầm.** Nhãn "CB-1 TF-IDF" trong **cả hai** bảng trên đều trỏ tới
 > **cùng một config time-decay** `cb4-03-timedecay-hl0365` — không phải config TF-IDF
@@ -242,7 +242,7 @@ Ba chế độ trọng số được khảo sát:
 Thêm nữa là tham số `half_life_days` cho hệ số suy giảm theo thời gian
 \(0{,}5^{\Delta t / t_{1/2}}\): phim xem lâu rồi đóng góp ít hơn vào hồ sơ.
 
-**Kết quả đo được ở Chương 6.3** và nó khá bất ngờ: `centered` **tệ hơn hẳn**
+**Kết quả đo được ở §4.8** và nó khá bất ngờ: `centered` **tệ hơn hẳn**
 `binary_pos` ở cả ba nhóm user (chênh −0,023 / −0,020 / −0,031, `p < 1e-44`), còn
 `rating` gần như tương đương `binary_pos`. Nghĩa là tín hiệu quan trọng là **có tương
 tác hay không**, không phải **mức độ hài lòng** — một phát hiện có giá trị vì nó
@@ -261,7 +261,7 @@ genome có thể "biết trước" những phim tương lai — và mọi kết 
 của CB sẽ lạc quan.
 
 Đây là **rủi ro phải nêu trước khi trích dẫn kết quả CB** (§3.2.3 đặt mức ban đầu
-của nó; Chương 6 đo định lượng và phân tầng). Đáng chú ý, `tags.csv` **có**
+của nó; §4.6–§4.7 đo định lượng và phân tầng). Đáng chú ý, `tags.csv` **có**
 timestamp nhưng bắt đầu muộn — ngày gán tag đầu tiên là **2005-12-24** — nên cả
 hai nguồn đều cần kiểm tra, không chỉ genome.
 
@@ -323,7 +323,7 @@ nhau cho mọi người. Đồ án bổ sung bốn metric mô tả **hành vi**:
 | **Novelty@k** | Trung bình \(-\log_2 p(i)\) của các item được gợi ý | Gợi ý có lạ không? |
 | **ILD@k** | Trung bình khác biệt nội dung giữa các cặp trong danh sách | Danh sách có đa dạng không? |
 
-Kết quả ở Chương 6.4 cho thấy **coverage đảo ngược với độ chính xác**: ALS chính
+Kết quả ở §4.9 cho thấy **coverage đảo ngược với độ chính xác**: ALS chính
 xác nhất (NDCG@10 = 0,1375) nhưng chỉ chạm **14,94%** catalog; CB-3 Tag Genome kém
 nhất trong nhóm CB (0,0713) nhưng chạm **67,20%**. Đây là phát hiện quan trọng về
 thực tiễn — không phải mô hình nào "tốt nhất" nếu không nói mục tiêu là gì.
@@ -344,7 +344,7 @@ về mặt thực tế — nhưng "lớn" là cảm tính. Đồ án dùng hai c
 > (CF vs CF, CB vs CB, cold-start vs cold-start), **không** so chéo CF↔CB — vì hai
 > nhóm được tinh chỉnh với số config khác nhau, nên so chéo sẽ trộn lẫn hiệu ứng của
 > "thuật toán" với hiệu ứng của "mức độ tinh chỉnh". Việc so chéo CF↔CB được nêu là
-> hướng phát triển (§8.2).
+> hướng phát triển (§5.8).
 
 ---
 
@@ -359,7 +359,7 @@ về mặt thực tế — nhưng "lớn" là cảm tính. Đồ án dùng hai c
 | Kết hợp | late fusion | CB-4 (§4.3.2) |
 | Đo bài toán xếp hạng | Järvelin & Kekäläinen (2002) | NDCG@10 là metric chính (§2.4.2) |
 | Đo hành vi hệ thống | Shani & Gunawardana (2011) | coverage, Gini, novelty, ILD (§2.4.3) |
-| Rủi ro rò rỉ metadata | — | Phân tầng 3 kỷ nguyên (Chương 6) |
+| Rủi ro rò rỉ metadata | — | Phân tầng 3 kỷ nguyên (§4.6–§4.7) |
 
 ---
 

@@ -1,0 +1,3 @@
+model,cold_item_score,cold_item_rank,user_id,n_items
+cf-als,0.0,4186,72315,10
+cb2-bm25,0.14288902282714844,371,72315,10

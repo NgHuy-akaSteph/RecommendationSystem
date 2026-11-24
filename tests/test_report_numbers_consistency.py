@@ -15,8 +15,9 @@ from src import paths
 
 ROOT = paths.ROOT
 SCRIPT = ROOT / "scripts" / "check_report_numbers.py"
-CH5 = ROOT / "docs" / "report" / "05-experimental-results.md"
-CH6 = ROOT / "docs" / "report" / "06-leakage-analysis-and-discussion.md"
+CH3 = ROOT / "docs" / "report" / "03-dataset-and-methodology.md"
+CH4 = ROOT / "docs" / "report" / "04-results-and-analysis.md"
+CH5 = ROOT / "docs" / "report" / "05-discussion-and-conclusion.md"
 
 
 @pytest.fixture(scope="module")
@@ -29,9 +30,10 @@ def checker():
 
 
 def test_report_files_exist():
-    """Hai chương đã viết phải tồn tại ở `docs/report/`."""
+    """Ba chương đã gộp phải tồn tại ở `docs/report/`."""
+    assert CH3.exists()
+    assert CH4.exists()
     assert CH5.exists()
-    assert CH6.exists()
 
 
 def test_current_reports_have_zero_mismatches(checker):

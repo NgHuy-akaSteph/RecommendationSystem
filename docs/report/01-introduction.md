@@ -2,7 +2,7 @@
 
 > **Trả lời RQ1–RQ3:** chương này đặt bối cảnh, nêu ba câu hỏi nghiên cứu mà toàn bộ
 > báo cáo nhằm trả lời, và nói rõ phạm vi cũng như những gì đồ án **không** làm.
-> Chương 5 trả lời RQ1 và RQ2; Chương 6 trả lời RQ3.
+> Chương 4 trả lời cả ba RQ bằng số liệu và phân tích phân tầng theo kỷ nguyên.
 
 ---
 
@@ -64,8 +64,8 @@ Genome được tính ngoài động trên toàn corpus, tức có thể chứa 
 chưa phát hành tại thời điểm một user đang xem. Nếu vậy, kết quả content-based có
 thể lạc quan do **rò rỉ metadata hậu kỳ** chứ không phải do nội dung thật sự hữu ích.
 
-Ba câu hỏi này tạo thành một cấu trúc báo cáo: **Chương 5** trả lời RQ1–RQ2 bằng
-số liệu, **Chương 6** trả lời RQ3 bằng phân tầng theo ba kỷ nguyên người dùng.
+Ba câu hỏi này tạo thành một cấu trúc báo cáo: **Chương 4** trả lời RQ1–RQ2 bằng
+số liệu ở §4.1–§4.5, và RQ3 bằng phân tầng theo ba kỷ nguyên người dùng ở §4.6–§4.7.
 
 ## 1.3 Đóng góp của đồ án
 
@@ -83,7 +83,7 @@ số liệu, **Chương 6** trả lời RQ3 bằng phân tầng theo ba kỷ ngu
    có nghi ngờ thiên lệch thành kết luận có cơ sở. Bằng chứng sweep được commit
    trong repo (`results/final/ablation-*.csv`, 144 dòng) nên người đọc tự đếm được.
 
-4. **Đo trực tiếp rủi ro rò rỉ metadata hậu kỳ.** Chương 6 phân tầng theo ba kỷ
+4. **Đo trực tiếp rủi ro rò rỉ metadata hậu kỳ.** §4.6–§4.7 phân tầng theo ba kỷ
    nguyên người dùng và thêm một đối chứng "chỉ dùng genres" (không rò rỉ) — cho
    thấy phần lớn lợi thế của tag đến từ **tính chất nội dung**, không phải từ rò rỉ
    thời gian.
@@ -115,20 +115,23 @@ số liệu, **Chương 6** trả lời RQ3 bằng phân tầng theo ba kỷ ngu
 > trong repo**. Repo hiện chỉ có split `temporal80_20` (per-user) và biến thể
 > `temporal80_20+coldstart_item`. Một nhánh "no-leak" sạch không dựng được trên split
 > per-user vì đặc trưng item được dùng chung cho toàn corpus — đó chính là nội dung
-> phân tích ở Chương 6, thay vì một bảng số. Vì vậy báo cáo **không** ghi con số
+> phân tích ở §4.6, thay vì một bảng số. Vì vậy báo cáo **không** ghi con số
 > 66% ở bất kỳ đâu.
 
 Bốn giới hạn cần nhắc khi trình bày:
 
-- **Metadata hậu kỳ.** Đã đo và phân tích ở Chương 6, nhưng số tuyệt đối của CB vẫn
+- **Metadata hậu kỳ.** Đã đo và phân tích ở §4.6–§4.7, nhưng số tuyệt đối của CB vẫn
   lạc quan hơn môi trường production. Đồ án chứng minh được *thứ hạng bất biến qua
   các kỷ nguyên*, không chứng minh được *không rò rỉ* — khác nhau về mức độ khẳng
   định.
 - **Cold-start là mô phỏng.** 10% phim bị giữ lại theo 5 nhóm năm phát hành, nhưng mọi
   user vẫn có lịch sử train. Đây không phải tình huống user mới thật sự.
 - **Chỉ đánh giá offline.** Không có kiểm định thực tế với người dùng.
-- **Giao thức LOO chưa chạy.** Lựa chọn full ranking dựa trên trích dẫn học thuật
-  (Krichene & Rendle, 2020), chưa có bằng chứng Kendall τ đo trong repo.
+- **Giao thức LOO đã chạy, nhưng chỉ trên 12 mô hình tốt nhất.** Kendall τ = 0,908
+  (`p = 4,81e-05`) giữa thứ hạng full-ranking và sampled LOO (§3.9.3) — đủ để bảo vệ
+  kết luận định tính. Chưa kiểm tra thứ hạng giữa **các config trong cùng lưới sweep**
+  (144 dòng), nơi độ nhạy của sampled metric cao nhất. Báo cáo chỉ dùng biên độ sweep
+  ở §4.2, không dùng để kết luận thứ hạng, nên kết luận không phụ thuộc điểm này.
 
 ## 1.5 Cấu trúc báo cáo
 
@@ -136,19 +139,16 @@ Mỗi chương mở đầu bằng câu "Trả lời RQ nào":
 
 | Chương | Trả lời | Nội dung cốt lõi |
 |---|---|---|
-| **2** Literature Review | — | Cơ sở lý thuyết: CF, content-based, metric xếp hạng |
-| **3** Dataset & Preprocessing | — | Dữ liệu, EDA, bốn quyết định tiền xử lý và ảnh hưởng của chúng |
-| **4** Methodology | — | 9 mô hình, 3 giao thức, bằng chứng protocol |
-| **5** Experimental Results | **RQ1, RQ2** | Bảng chính, cân bằng sweep, đảo chiều cold-start, kiểm định |
-| **6** Phân tích chống rò rỉ & tranh luận | **RQ3** | Phân tầng 3 kỷ nguyên, metric hành vi, khi nào phương pháp nào thắng |
-| **7** Discussion | — | Tổng hợp, đánh đổi CF↔CB, bài học thiết kế protocol, giới hạn, hàm ý |
-| **8** Conclusion & Future Work | — | Đóng góp, hướng phát triển |
-| **Phụ lục** | — | Bảng sweep đầy đủ, CI và Wilcoxon, quy trình tái lập, cách kiểm chứng số |
+| **2** Tổng quan và cơ sở lý thuyết | — | Cơ sở lý thuyết: CF, content-based, metric xếp hạng |
+| **3** Dữ liệu, tiền xử lý và phương pháp | — | Dữ liệu, EDA, bốn quyết định tiền xử lý, 9 mô hình, 3 giao thức, bằng chứng protocol |
+| **4** Kết quả thực nghiệm và phân tích | **RQ1, RQ2, RQ3** | Bảng chính, cân bằng sweep, đảo chiều cold-start, kiểm định; phân tầng 3 kỷ nguyên, metric hành vi, trình diễn hệ thống |
+| **5** Thảo luận và kết luận | — | Tổng hợp, đánh đổi CF↔CB, bài học thiết kế protocol, giới hạn, hàm ý, đóng góp, hướng phát triển |
+| **Phụ lục** | — | Bảng sweep đầy đủ, CI và Wilcoxon, so sánh giao thức, quy trình tái lập, cách kiểm chứng số |
 
-**Chương 3 và Chương 4** được viết theo hướng "đọc được mà vẫn kiểm chứng được": mỗi
-quyết định thiết kế đều kèm lý do và chỉ rõ nó ảnh hưởng tới kết luận nào ở đâu.
-**Chương 6** là chương đặc biệt của đồ án — nơi biến "con số" thành "kết luận đáng
-tin", và nơi tự nêu giới hạn của chính kết luận chống rò rỉ.
+**Chương 3** được viết theo hướng "đọc được mà vẫn kiểm chứng được": mỗi quyết
+định thiết kế đều kèm lý do và chỉ rõ nó ảnh hưởng tới kết luận nào ở đâu.
+**§4.6–§4.7 của Chương 4** là phần đặc biệt của đồ án — nơi biến "con số" thành
+"kết luận đáng tin", và nơi tự nêu giới hạn của chính kết luận chống rò rỉ.
 
 ---
 

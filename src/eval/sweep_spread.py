@@ -59,6 +59,7 @@ class SweepSpread:
         min_value: NDCG@10 nhỏ nhất.
         max_value: NDCG@10 lớn nhất.
         spread_pct: biên độ theo công thức `(max − min) / max` (%).
+        best_exp_name: tên config đạt NDCG@10 cao nhất trong lưới.
     """
 
     label: str
@@ -66,6 +67,7 @@ class SweepSpread:
     min_value: float
     max_value: float
     spread_pct: float
+    best_exp_name: str = ""
 
 
 def spread_of(values: pd.Series) -> float:
@@ -108,12 +110,15 @@ def spread_by_model(final_dir: Path | None = None) -> dict[str, SweepSpread]:
             # Model thuộc nhóm khác thì bỏ qua — dòng của nó đã được tính ở file sở hữu
             if MODEL_OWNER.get(str(model)) != group:
                 continue
+            # Config tốt nhất = dòng có NDCG@10 cao nhất trong lưới sở hữu
+            best_row = grp.loc[grp[METRIC].idxmax()]
             out[str(model)] = SweepSpread(
                 label=str(model),
                 n=len(grp),
                 min_value=float(grp[METRIC].min()),
                 max_value=float(grp[METRIC].max()),
                 spread_pct=spread_of(grp[METRIC]),
+                best_exp_name=str(best_row.get("exp_name", "")),
             )
     return out
 
@@ -127,12 +132,14 @@ def spread_by_group(final_dir: Path | None = None) -> dict[str, SweepSpread]:
         if not path.exists():
             continue
         df = _load(path)
+        best_row = df.loc[df[METRIC].idxmax()]
         out[group] = SweepSpread(
             label=group,
             n=len(df),
             min_value=float(df[METRIC].min()),
             max_value=float(df[METRIC].max()),
             spread_pct=spread_of(df[METRIC]),
+            best_exp_name=str(best_row.get("exp_name", "")),
         )
     return out
 

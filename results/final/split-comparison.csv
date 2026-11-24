@@ -1,0 +1,5 @@
+Cách chia,min_train,Ngưỡng relevant,User hợp lệ
+global 70/30 theo quantile timestamp,5,"≥ 4,0",4399
+global 70/30,1,"≥ 4,0",4450
+global 75/25,5,"≥ 4,0",5622
+per-user 80/20 (dùng trong đồ án),5,"≥ 4,0",158774

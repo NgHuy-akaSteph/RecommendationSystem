@@ -218,8 +218,11 @@ venv/bin/python -m pytest tests/
 ```
 
 `check_report_numbers.py` phải báo **`✓ 0 lệch`** — nếu báo lệch, số trong
-`docs/report/05-experimental-results.md` và `06-leakage-analysis-and-discussion.md` đã
+`docs/report/03-dataset-and-methodology.md` và `04-results-and-analysis.md` đã
 lệch so với CSV mới, cần cập nhật hoặc rollback.
+
+Thêm `scripts/check_report_crossrefs.py` — kiểm tra mọi tham chiếu `§x.y` trong báo
+cáo vẫn trỏ tới mục tồn tại (hàng rào cho thao tác đánh số lại mục).
 
 ---
 
