@@ -352,11 +352,11 @@ về mặt thực tế — nhưng "lớn" là cảm tính. Đồ án dùng hai c
 
 | Khái niệm | Cơ sở lý thuyết | Cài đặt cụ thể trong đồ án |
 |---|---|---|
-| CF dựa trên hành vi | Resnick et al. (1994); Koren et al. (2009) | ALS (§4.4.1), Item-CF (§4.4.2), BPR-MF (§4.4.3) |
+| CF dựa trên hành vi | Resnick et al. (1994); Koren et al. (2009) | ALS (§3.8.1), Item-CF (§3.8.2), BPR-MF (§3.8.3) |
 | CF cho implicit feedback | Hu et al. (2008) | `c_ui = 1 + α`, chỉ tương tác relevant |
-| CB dựa trên nội dung | TF-IDF; BM25 | CB-1, CB-2 (§4.3.2) |
-| CB dựa trên Tag Genome | GroupLens genome-scores | CB-3 (§4.3.2) |
-| Kết hợp | late fusion | CB-4 (§4.3.2) |
+| CB dựa trên nội dung | TF-IDF; BM25 | CB-1, CB-2 (§3.7.2) |
+| CB dựa trên Tag Genome | GroupLens genome-scores | CB-3 (§3.7.2) |
+| Kết hợp | late fusion | CB-4 (§3.7.2) |
 | Đo bài toán xếp hạng | Järvelin & Kekäläinen (2002) | NDCG@10 là metric chính (§2.4.2) |
 | Đo hành vi hệ thống | Shani & Gunawardana (2011) | coverage, Gini, novelty, ILD (§2.4.3) |
 | Rủi ro rò rỉ metadata | — | Phân tầng 3 kỷ nguyên (§4.6–§4.7) |

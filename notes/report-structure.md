@@ -9,10 +9,16 @@
 > **Khung này thay thế hoàn toàn** `notes/report-structure.md` cũ (viết cho MovieLens 1M,
 > 2 methods, 18 config — lệch toàn bộ với hiện trạng).
 
-> **Trạng thái viết:** Chương 5–6 đã có bản thảo đầy đủ tại `docs/report/`
+> **Trạng thái viết:** ~~Chương 5–6 đã có bản thảo đầy đủ tại `docs/report/`
 > (`05-experimental-results.md`, `06-leakage-analysis-and-discussion.md`) — khung này là
 > **đề mục + mô tả nội dung** cho các chương còn lại (1–4, 7–8), không phải bản thảo.
-> Mọi số trong khung đã đối chiếu với `results/final/` (xem `scripts/check_report_numbers.py`).
+> Mọi số trong khung đã đối chiếu với `results/final/` (xem `scripts/check_report_numbers.py`).~~
+
+> ⚠️ **Cảnh báo (2026-11-24):** khung này theo cấu trúc **8 chương cũ** và đã **lỗi
+> thời**. Báo cáo hiện đã gộp còn **5 chương**. Mục lục chính thức (nguồn sự thật) là
+> [`docs/report/README.md`](../docs/report/README.md). Các tham chiếu `§5.x`–`§8.x`
+> và "Chương 6/7/8" trong file này **không còn đúng** — dùng file này chỉ để tra cứu
+> *ý tưởng nội dung* từng mục, không dùng để đánh số mục.
 
 ---
 

@@ -100,3 +100,33 @@ venv/bin/python scripts/build_report_appendix.py
 # Test hồi quy tài liệu + biên độ sweep
 venv/bin/python -m pytest tests/ -q
 ```
+
+## 6. Tài liệu tham khảo
+
+Danh mục gộp từ các trích dẫn trong báo cáo (mỗi chương có dòng "Tài liệu tham khảo
+chương này" ở cuối chương).
+
+1. Harper, F. M., & Konstan, J. A. (2015). *The MovieLens datasets: History and
+   context*. ACM Transactions on Interactive Intelligent Systems, 5(4), Article 19.
+2. Hu, Y., Koren, Y., & Volinsky, C. (2008). *Collaborative filtering for implicit
+   feedback datasets*. ICDM 2008, 301–308.
+3. Järvelin, K., & Kekäläinen, J. (2002). *Cumulated gain-based evaluation of IR
+   techniques*. ACM TOIS, 20(4), 422–446.
+4. Koren, Y., Bell, R., & Volinsky, C. (2009). *Matrix factorization techniques for
+   recommender systems*. IEEE Computer, 42(8), 30–37.
+5. Krichene, W., & Rendle, S. (2020). *On sampled metrics for item recommendation*.
+   KDD 2020, 1098–1108.
+6. McFee, B., et al. (2020). *The Information Retrieval Toolkit*. *JOSS*, 5(50), 2370.
+7. Rendle, S., Freudenthaler, C., Gantner, Z., & Schmidt-Thieme, L. (2009). *BPR:
+   Bayesian personalized ranking from implicit feedback*. UAI 2009, 452–461.
+8. Resnick, P., et al. (1994). *GroupLens: An architecture for collaborative filtering
+   of netnews*. ACM SIGIR 1994, 175–186.
+9. Ricci, F., Rokach, L., & Shapira, D. (2015). *Recommender Systems Handbook* (2nd ed.).
+   Springer.
+10. Robertson, S., & Zaragoza, H. (2009). *The probabilistic relevance framework: BM25
+    and beyond*. Foundations and Trends in Information Retrieval, 3(4), 333–389.
+11. Shani, G., & Gunawardana, S. (2011). *Evaluating recommendation systems*.
+    *Handbook of Recommender Systems*, Springer, 21–51.
+
+Tài liệu kỹ thuật nội bộ (không trích dẫn như bài báo): `docs/theoretical-foundations-cf-methods.md`,
+`docs/advanced-cf-methods-overview.md`, `docs/system-architecture.md`.
